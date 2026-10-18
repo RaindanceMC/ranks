@@ -6,7 +6,9 @@
 #   weight: 1–99, higher is more senior. Somebody holding several wears the highest unless they pick
 #           another, and the tablist puts higher ranks nearer the top.
 #
-# Ranks are given by staff: /rank give <player> <rank>.
+# Ranks are given by staff: /rank give <player> <rank>. Somebody in a permission group (LuckPerms) of a
+# rank's name holds that rank too — the staff ranks (support, mod, admin, owner, builder, creator, dev,
+# tester) are given that way, by /promote or in LuckPerms.
 ranks:
   owner:
     team: true
@@ -43,6 +45,13 @@ ranks:
     weight: 70
     description:
       - "Keeps the peace."
+  support:
+    team: true
+    title: "Support"
+    tag: "<green>[SUPPORT]</green>"
+    weight: 62
+    description:
+      - "Answers questions and helps new players."
   helper:
     team: true
     title: "Helper"
@@ -51,9 +60,23 @@ ranks:
     description:
       - "Answers questions and helps new players."
   builder:
-    team: false
+    team: true
     title: "Builder"
     tag: "<yellow>[BUILDER]</yellow>"
     weight: 50
     description:
       - "Builds the spawn, the hub and everything in between."
+  creator:
+    team: true
+    title: "Creator"
+    tag: "<light_purple>[CREATOR]</light_purple>"
+    weight: 45
+    description:
+      - "Makes videos and streams about the server."
+  tester:
+    team: true
+    title: "Tester"
+    tag: "<gray>[TESTER]</gray>"
+    weight: 40
+    description:
+      - "Tries new features before everybody else does."

@@ -30,7 +30,8 @@
         <!-- 0.4.1: every change in the manage menus asks for the admin permission again. -->
         <!-- 0.5.0: RainsCore 2.0 network — ranks, custom ranks and holders are the network's documents, read again when another server writes; no more file syncing between servers. -->
         <!-- 0.5.1: its per-player store is Core's KeyedDocument (no change in behaviour). -->
-        <plugin.version>0.5.1</plugin.version>
+        <!-- 0.6.0: a permission group named like a rank gives that rank (staff ranks follow LuckPerms); support, creator and tester ship, builder is on the team. -->
+        <plugin.version>0.6.0</plugin.version>
     </properties>
 
     <dependencies>

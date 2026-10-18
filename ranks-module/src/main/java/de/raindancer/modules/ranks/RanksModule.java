@@ -24,7 +24,7 @@ public final class RanksModule implements FlexModule {
 
     public static final String BADGE_OWNER = "ranks";
 
-    private static final ModuleInfo INFO = ModuleInfo.of("ranks", "Ranks", "0.5.1")
+    private static final ModuleInfo INFO = ModuleInfo.of("ranks", "Ranks", "0.6.0")
             .describedAs("Ranks like [OWNER], [DEV] or [ADMIN] in front of a name — in chat, above the head and in the tablist, switchable for the server and by every player")
             .by("Raindancer118");
 
@@ -61,6 +61,11 @@ public final class RanksModule implements FlexModule {
 
         RankService service = new RankService(catalogue, holders, settings.current());
         settings.onChange(service::settings);
+        // Online players only: their groups are in memory, an offline one would mean a storage read in a render.
+        var groups = context.core().groups();
+        var server = context.plugin().getServer();
+        service.fromGroups(player -> server.getPlayer(player) == null ? java.util.Set.of() : groups.groupsOf(player));
+        context.closeWith(() -> service.fromGroups(null));
 
         NameBadges.registerPlaced(BADGE_OWNER, service::badge);
         context.closeWith(() -> NameBadges.unregister(BADGE_OWNER));

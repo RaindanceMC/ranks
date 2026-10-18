@@ -151,12 +151,53 @@ class RankServiceTest {
     @DisplayName("holding a team rank lists somebody in the team section of the tablist, unless the server says no")
     void teamSection() {
         assertThat(service.section(ADA)).isEmpty();
-        service.give(ADA, service.rank("builder").orElseThrow());
-        assertThat(service.section(ADA)).as("builder is not team").isEmpty();
+        assertThat(service.create("vip", "[VIP]", 10)).isEqualTo(Outcome.DONE);
+        service.give(ADA, service.rank("vip").orElseThrow());
+        assertThat(service.section(ADA)).as("vip is not team").isEmpty();
         service.give(ADA, service.rank("team").orElseThrow());
         assertThat(service.section(ADA)).contains("Team");
-        assertThat(service.team("builder", true)).isEqualTo(Outcome.DONE);
+        assertThat(service.team("vip", true)).isEqualTo(Outcome.DONE);
         service.settings(new RanksSettings(true, true, true, true, true, false, "Team"));
         assertThat(service.section(ADA)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("a permission group of a rank's name gives that rank — the tag follows LuckPerms")
+    void rankFromGroup() {
+        service.fromGroups(player -> player.equals(ADA) ? java.util.Set.of("dev", "default") : java.util.Set.of());
+
+        assertThat(service.held(ADA)).extracting(Rank::id).containsExactly("dev");
+        assertThat(service.worn(ADA)).map(Rank::id).contains("dev");
+        assertThat(badge(NameBadges.Place.CHAT)).contains("DEV");
+        assertThat(service.section(ADA)).isPresent();
+    }
+
+    @Test
+    @DisplayName("groups and given ranks add up; the heaviest is worn")
+    void groupsAndGiven() {
+        service.give(ADA, dev);
+        service.fromGroups(player -> java.util.Set.of("owner"));
+
+        assertThat(service.held(ADA)).extracting(Rank::id).containsExactly("owner", "dev");
+        assertThat(service.worn(ADA)).map(Rank::id).contains("owner");
+    }
+
+    @Test
+    @DisplayName("a rank held through a group can be worn by choice")
+    void wearFromGroup() {
+        service.give(ADA, owner);
+        service.fromGroups(player -> java.util.Set.of("dev"));
+
+        assertThat(service.wear(ADA, "dev")).isEqualTo(Outcome.DONE);
+        assertThat(service.worn(ADA)).map(Rank::id).contains("dev");
+    }
+
+    @Test
+    @DisplayName("the staff ranks ship, named like their groups")
+    void staffRanksShip() {
+        for (String id : java.util.List.of("owner", "admin", "mod", "support", "builder", "creator", "dev", "tester")) {
+            assertThat(service.rank(id)).as(id).isPresent();
+            assertThat(service.rank(id).orElseThrow().team()).as(id + " is on the team").isTrue();
+        }
     }
 }

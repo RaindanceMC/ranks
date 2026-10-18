@@ -19,6 +19,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 /** Giving and taking ranks, what a player wears, and the badge Core draws in front of their name. */
 public final class RankService implements IRanksService {
@@ -31,6 +32,7 @@ public final class RankService implements IRanksService {
     /** Parsed tags by their markup, so a chat line or a tablist pass parses nothing. */
     private final Map<String, Component> parsed = new ConcurrentHashMap<>();
     private volatile RanksSettings settings;
+    private volatile Function<UUID, Set<String>> groups = player -> Set.of();
 
     public RankService(RankCatalogue catalogue, HolderBook book, RanksSettings settings) {
         this.catalogue = catalogue;
@@ -47,6 +49,39 @@ public final class RankService implements IRanksService {
         return settings;
     }
 
+    /**
+     * The permission groups somebody is in. A group named like a rank gives that rank, on top of what
+     * {@code /rank give} gave — so a staff rank set in LuckPerms carries its tag without a second step.
+     */
+    public void fromGroups(Function<UUID, Set<String>> lookup) {
+        this.groups = lookup == null ? player -> Set.of() : lookup;
+    }
+
+    /** Their stored holder with the ranks their groups give added in. */
+    private Optional<Holder> effective(UUID player) {
+        Optional<Holder> stored = book.find(player);
+        Set<String> inGroups = player == null ? Set.of() : groups.apply(player);
+        if (inGroups.isEmpty()) {
+            return stored;
+        }
+        Map<String, Rank> known = catalogue.byId();
+        Set<String> all = new LinkedHashSet<>(stored.map(Holder::ranks).orElse(Set.of()));
+        boolean added = false;
+        for (String group : inGroups) {
+            if (known.containsKey(group)) {
+                added |= all.add(group);
+            }
+        }
+        if (!added) {
+            return stored;
+        }
+        return Optional.of(stored.orElse(Holder.fresh(player)).withRanks(all));
+    }
+
+    private Set<String> ranksOf(UUID player) {
+        return effective(player).map(Holder::ranks).orElse(Set.of());
+    }
+
     // ------------------------------------------------------------------------------- reading
 
     /** What Core draws in front of a name; safe from any thread. */
@@ -60,20 +95,20 @@ public final class RankService implements IRanksService {
     }
 
     public Optional<Rank> shown(UUID player, Place place) {
-        Optional<Holder> holder = book.find(player);
+        Optional<Holder> holder = effective(player);
         return holder.isEmpty() ? Optional.empty()
                 : rule.shown(holder.get(), catalogue.byId(), settings, place);
     }
 
     /** The rank they wear wherever it shows — what /rank and the menu call "your rank". */
     public Optional<Rank> worn(UUID player) {
-        return book.find(player).flatMap(holder -> rule.worn(holder, catalogue.byId(), settings.playersChoose()));
+        return effective(player).flatMap(holder -> rule.worn(holder, catalogue.byId(), settings.playersChoose()));
     }
 
     /** Their ranks that still exist in ranks.yml, most senior first. */
     public List<Rank> held(UUID player) {
         Map<String, Rank> known = catalogue.byId();
-        return book.of(player).ranks().stream().map(known::get).filter(rank -> rank != null)
+        return ranksOf(player).stream().map(known::get).filter(rank -> rank != null)
                 .sorted(Comparator.comparingInt(Rank::weight).reversed().thenComparing(Rank::id)).toList();
     }
 
@@ -88,14 +123,13 @@ public final class RankService implements IRanksService {
             return Optional.empty();
         }
         Map<String, Rank> known = catalogue.byId();
-        boolean team = book.find(player).map(holder -> holder.ranks().stream()
-                .map(known::get).anyMatch(rank -> rank != null && rank.team())).orElse(false);
+        boolean team = ranksOf(player).stream().map(known::get).anyMatch(rank -> rank != null && rank.team());
         String name = now.teamName() == null || now.teamName().isBlank() ? "Team" : now.teamName().strip();
         return team ? Optional.of(name) : Optional.empty();
     }
 
     public int sortWeight(UUID player) {
-        return book.find(player).map(holder -> rule.sortWeight(holder, catalogue.byId(), settings)).orElse(0);
+        return effective(player).map(holder -> rule.sortWeight(holder, catalogue.byId(), settings)).orElse(0);
     }
 
     public List<Rank> ranks() {
@@ -152,7 +186,7 @@ public final class RankService implements IRanksService {
             return Outcome.NOT_ALLOWED;
         }
         String wanted = id == null ? "" : id;
-        if (!wanted.isEmpty() && !wanted.equals(Holder.HIDDEN) && !book.of(player).ranks().contains(wanted)) {
+        if (!wanted.isEmpty() && !wanted.equals(Holder.HIDDEN) && !ranksOf(player).contains(wanted)) {
             return Outcome.NOT_HELD;
         }
         if (book.of(player).worn().equals(wanted)) {
