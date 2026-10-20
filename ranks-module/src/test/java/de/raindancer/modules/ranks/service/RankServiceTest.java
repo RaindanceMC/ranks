@@ -161,10 +161,22 @@ class RankServiceTest {
         assertThat(service.section(ADA)).isEmpty();
     }
 
+    private static final UUID BOB = UUID.randomUUID();
+
+    /** LuckPerms with the staff groups; Ada and Bob are online. */
+    private FakeGroups luckPerms() {
+        FakeGroups groups = new FakeGroups().group("default").group("dev").group("owner", "admin")
+                .group("admin", "mod").group("mod");
+        service.linkTo(groups, player -> true);
+        return groups;
+    }
+
     @Test
     @DisplayName("a permission group of a rank's name gives that rank — the tag follows LuckPerms")
     void rankFromGroup() {
-        service.fromGroups(player -> player.equals(ADA) ? java.util.Set.of("dev", "default") : java.util.Set.of());
+        FakeGroups groups = luckPerms();
+        groups.join(ADA, "dev");
+        groups.join(ADA, "default");
 
         assertThat(service.held(ADA)).extracting(Rank::id).containsExactly("dev");
         assertThat(service.worn(ADA)).map(Rank::id).contains("dev");
@@ -173,12 +185,23 @@ class RankServiceTest {
     }
 
     @Test
+    @DisplayName("an offline player's groups are not asked for while drawing — that would be a storage read")
+    void offlineNotAsked() {
+        FakeGroups groups = new FakeGroups().group("dev");
+        groups.join(ADA, "dev");
+        service.linkTo(groups, player -> false);
+
+        assertThat(service.held(ADA)).isEmpty();
+    }
+
+    @Test
     @DisplayName("groups and given ranks add up; the heaviest is worn")
     void groupsAndGiven() {
         service.give(ADA, dev);
-        service.fromGroups(player -> java.util.Set.of("owner"));
+        FakeGroups groups = luckPerms();
+        groups.join(ADA, "owner");
 
-        assertThat(service.held(ADA)).extracting(Rank::id).containsExactly("owner", "dev");
+        assertThat(service.held(ADA)).extracting(Rank::id).containsExactly("owner", "admin", "dev", "mod");
         assertThat(service.worn(ADA)).map(Rank::id).contains("owner");
     }
 
@@ -186,10 +209,104 @@ class RankServiceTest {
     @DisplayName("a rank held through a group can be worn by choice")
     void wearFromGroup() {
         service.give(ADA, owner);
-        service.fromGroups(player -> java.util.Set.of("dev"));
+        luckPerms().join(ADA, "dev");
 
         assertThat(service.wear(ADA, "dev")).isEqualTo(Outcome.DONE);
         assertThat(service.worn(ADA)).map(Rank::id).contains("dev");
+    }
+
+    @Test
+    @DisplayName("a rank linked to differently named groups is held through any of them")
+    void linkedGroups() {
+        FakeGroups groups = luckPerms().group("moderator").group("trialmod");
+        assertThat(service.link("mod", java.util.List.of("Moderator", "trialmod"))).isEqualTo(Outcome.DONE);
+        groups.join(ADA, "trialmod");
+
+        assertThat(service.rank("mod").orElseThrow().groups()).containsExactly("moderator", "trialmod");
+        assertThat(service.held(ADA)).extracting(Rank::id).containsExactly("mod");
+        groups.leave(ADA, "trialmod");
+        groups.join(ADA, "mod");
+        assertThat(service.held(ADA)).as("the rank's own name no longer counts once groups are named").isEmpty();
+
+        assertThat(service.link("mod", java.util.List.of("not a group!"))).isEqualTo(Outcome.INVALID);
+        assertThat(service.link("mod", java.util.List.of())).isEqualTo(Outcome.DONE);
+        assertThat(service.rank("mod").orElseThrow().groups()).as("none named: its own name again").containsExactly("mod");
+    }
+
+    @Test
+    @DisplayName("giving a rank with a LuckPerms group puts them in the group, not in holders.yml")
+    void giveWritesThrough() {
+        FakeGroups groups = luckPerms();
+
+        assertThat(service.give(BOB, dev)).isEqualTo(Outcome.DONE);
+        assertThat(groups.directGroupsOf(BOB)).containsExactly("dev");
+        assertThat(service.holder(BOB).ranks()).isEmpty();
+        assertThat(service.held(BOB)).extracting(Rank::id).containsExactly("dev");
+        assertThat(service.give(BOB, dev)).isEqualTo(Outcome.ALREADY);
+    }
+
+    @Test
+    @DisplayName("a rank held through an inherited group is already held")
+    void giveInherited() {
+        luckPerms().join(BOB, "admin");
+
+        assertThat(service.give(BOB, service.rank("mod").orElseThrow())).isEqualTo(Outcome.ALREADY);
+    }
+
+    @Test
+    @DisplayName("a rank without a group, or a server without LuckPerms, keeps it in holders.yml")
+    void giveWithoutGroup() {
+        FakeGroups groups = luckPerms();
+        Rank tester = service.rank("tester").orElseThrow();
+
+        assertThat(service.give(BOB, tester)).isEqualTo(Outcome.DONE);
+        assertThat(service.holder(BOB).ranks()).containsExactly("tester");
+        assertThat(groups.directGroupsOf(BOB)).isEmpty();
+
+        groups.editable = false;
+        assertThat(service.give(BOB, dev)).isEqualTo(Outcome.DONE);
+        assertThat(service.holder(BOB).ranks()).contains("dev");
+        assertThat(groups.directGroupsOf(BOB)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("taking a rank takes them out of its group and out of holders.yml")
+    void takeWritesThrough() {
+        FakeGroups groups = luckPerms();
+        groups.editable = false;
+        service.give(BOB, dev);
+        groups.editable = true;
+        groups.join(BOB, "dev");
+
+        assertThat(service.take(BOB, dev)).isEqualTo(Outcome.DONE);
+        assertThat(groups.directGroupsOf(BOB)).isEmpty();
+        assertThat(service.holder(BOB).ranks()).isEmpty();
+        assertThat(service.held(BOB)).isEmpty();
+        assertThat(service.take(BOB, dev)).isEqualTo(Outcome.NOT_HELD);
+    }
+
+    @Test
+    @DisplayName("a rank that comes with a higher group cannot be taken alone, and nothing is changed")
+    void takeInherited() {
+        FakeGroups groups = luckPerms();
+        groups.join(BOB, "admin");
+
+        assertThat(service.take(BOB, service.rank("mod").orElseThrow())).isEqualTo(Outcome.INHERITED);
+        assertThat(groups.directGroupsOf(BOB)).containsExactly("admin");
+        assertThat(service.inheritedFrom(BOB, service.rank("mod").orElseThrow())).contains("admin");
+    }
+
+    @Test
+    @DisplayName("everybody holding a rank: from holders.yml and from its groups")
+    void everyHolder() {
+        FakeGroups groups = luckPerms();
+        groups.editable = false;
+        service.give(ADA, dev);
+        groups.editable = true;
+        service.give(BOB, dev);
+
+        assertThat(service.everyHolderOf(dev)).containsExactlyInAnyOrder(ADA, BOB);
+        assertThat(service.holdersOf(dev)).as("the quick count reads holders.yml only").containsExactly(ADA);
     }
 
     @Test

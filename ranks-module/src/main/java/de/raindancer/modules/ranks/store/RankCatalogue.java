@@ -37,6 +37,8 @@ public final class RankCatalogue {
     public static final int LONGEST_TAG = 20;
 
     private static final Pattern ID = Pattern.compile("[a-z0-9_-]{1,32}");
+    /** What LuckPerms itself accepts as a group name, lowercased. */
+    private static final Pattern GROUP = Pattern.compile("[a-z0-9_.+-]{1,36}");
 
     private final YamlStore store;
     private final Supplier<InputStream> shipped;
@@ -105,6 +107,7 @@ public final class RankCatalogue {
             yaml.set(path + ".weight", rank.weight());
             yaml.set(path + ".description", rank.description());
             yaml.set(path + ".team", rank.team());
+            yaml.set(path + ".groups", rank.ownGroupOnly() ? null : rank.groups());
             List<String> deleted = new ArrayList<>(yaml.getStringList("deleted"));
             deleted.remove(rank.id());
             yaml.set("deleted", deleted);
@@ -138,6 +141,11 @@ public final class RankCatalogue {
     /** Whether an id may name a rank. */
     public static boolean isId(String id) {
         return id != null && ID.matcher(id).matches();
+    }
+
+    /** Whether a group name is one LuckPerms could have. */
+    public static boolean isGroup(String group) {
+        return group != null && GROUP.matcher(group.strip().toLowerCase(Locale.ROOT)).matches();
     }
 
     /** By id. */
@@ -195,8 +203,17 @@ public final class RankCatalogue {
                 weight = Math.clamp(weight, 1, 99);
             }
             String title = each.getString("title", "");
+            List<String> groups = new ArrayList<>();
+            for (String group : each.isList("groups") ? each.getStringList("groups")
+                    : List.of(each.getString("groups", ""))) {
+                if (isGroup(group)) {
+                    groups.add(group);
+                } else if (group != null && !group.isBlank()) {
+                    problems.add(id + ": '" + group + "' cannot be a permission group — letters, digits, - _ . + only.");
+                }
+            }
             read.put(id, new Rank(id, title.isBlank() ? id : title, tag, weight, each.getStringList("description"),
-                    each.getBoolean("team", false)));
+                    each.getBoolean("team", false), groups));
         }
         return Map.copyOf(read);
     }

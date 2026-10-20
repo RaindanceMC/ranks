@@ -1,6 +1,7 @@
 package de.raindancer.modules.ranks.command;
 
 import de.raindancer.core.platform.command.PlayerTargets;
+import de.raindancer.core.platform.util.Scheduling;
 import de.raindancer.core.ui.text.Markup;
 import de.raindancer.modules.ranks.RanksServices;
 import de.raindancer.modules.ranks.model.Holder;
@@ -142,23 +143,32 @@ public final class RankCommand implements IRanksCommand {
         }
         UUID id = target.get().getUniqueId();
         String name = PlayerTargets.shownName(target.get());
-        Markup tag = new Markup(rank.get().tag());
-        Outcome outcome = give ? live.ranks().give(id, rank.get()) : live.ranks().take(id, rank.get());
+        // A rank with a LuckPerms group is changed in LuckPerms' storage: not on the server thread.
+        Scheduling.async(live.plugin(), () -> tellChange(live, sender, target.get(), name, rank.get(), give,
+                give ? live.ranks().give(id, rank.get()) : live.ranks().take(id, rank.get())));
+    }
+
+    private static void tellChange(RanksServices live, CommandSender sender, OfflinePlayer target, String name,
+                                   Rank rank, boolean give, Outcome outcome) {
+        Markup tag = new Markup(rank.tag());
         switch (outcome) {
             case DONE -> {
                 live.messages().send(sender, give ? "ranks.given" : "ranks.taken", "player", name, "rank", tag);
-                Player online = target.get().getPlayer();
+                Player online = target.getPlayer();
                 if (online != null && !online.equals(sender)) {
                     live.messages().send(online, give ? "ranks.given-you" : "ranks.taken-you", "rank", tag);
                 }
             }
             case ALREADY -> live.messages().send(sender, "ranks.already-holds", "player", name, "rank", tag);
             case NOT_HELD -> live.messages().send(sender, "ranks.does-not-hold", "player", name, "rank", tag);
+            case INHERITED -> live.messages().send(sender, "ranks.inherited", "player", name, "rank", tag,
+                    "group", live.ranks().inheritedFrom(target.getUniqueId(), rank).orElse("?"));
+            case GROUP_FAILED -> live.messages().send(sender, "ranks.group-failed", "group", String.join(", ", rank.groups()));
             default -> tellRefusal(live, sender, outcome);
         }
     }
 
-    /** {@code create <id> <tag…>}, {@code edit <id> tag|title|weight|style|team …}, {@code delete <id> confirm}. */
+    /** {@code create <id> <tag…>}, {@code edit <id> tag|title|weight|style|team|groups …}, {@code delete <id> confirm}. */
     private static void manage(RanksServices live, CommandSender sender, String what, String[] args) {
         if (!sender.hasPermission(PermissionNodes.ADMIN)) {
             live.messages().send(sender, "ranks.usage");
@@ -203,6 +213,8 @@ public final class RankCommand implements IRanksCommand {
                         }
                     }
                     case "team" -> live.ranks().team(id, List.of("on", "yes", "true").contains(args[3].toLowerCase(Locale.ROOT)));
+                    case "groups", "group" -> live.ranks().link(id, args[3].equalsIgnoreCase("none") ? List.of()
+                            : List.of(rest.split("[,\\s]+")));
                     case "style" -> {
                         if (args[3].equalsIgnoreCase("reset")) {
                             yield live.ranks().restyle(id, de.raindancer.core.ui.text.NameStyle.NONE);
@@ -254,13 +266,17 @@ public final class RankCommand implements IRanksCommand {
             live.messages().send(sender, "ranks.no-ranks");
             return;
         }
-        for (Rank rank : which) {
-            List<String> names = live.ranks().holdersOf(rank).stream()
-                    .map(id -> live.core().identities().nameOf(id).orElse(id.toString().substring(0, 8)))
-                    .sorted(String.CASE_INSENSITIVE_ORDER).toList();
-            live.messages().send(sender, "ranks.list-line", "rank", new Markup(rank.tag()), "id", rank.id(),
-                    "count", String.valueOf(names.size()), "players", names.isEmpty() ? "—" : String.join(", ", names));
-        }
+        // Members of a rank's groups come from LuckPerms' storage: not on the server thread.
+        Scheduling.async(live.plugin(), () -> {
+            for (Rank rank : which) {
+                List<String> names = live.ranks().everyHolderOf(rank).stream()
+                        .map(id -> live.core().identities().nameOf(id).orElse(id.toString().substring(0, 8)))
+                        .sorted(String.CASE_INSENSITIVE_ORDER).toList();
+                live.messages().send(sender, "ranks.list-line", "rank", new Markup(rank.tag()), "id", rank.id(),
+                        "count", String.valueOf(names.size()), "players", names.isEmpty() ? "—" : String.join(", ", names),
+                        "groups", String.join(", ", rank.groups()));
+            }
+        });
     }
 
     private static void info(RanksServices live, CommandSender sender, String who) {
@@ -331,10 +347,13 @@ public final class RankCommand implements IRanksCommand {
             }
         } else if (args.length == 3 && first.equals("show")) {
             options.addAll(List.of("on", "off"));
+        } else if (admin && args.length == 4 && first.equals("edit") && args[2].equalsIgnoreCase("groups")) {
+            options.add("none");
+            live.ranks().rank(args[1]).ifPresent(rank -> options.add(String.join(",", rank.groups())));
         } else if (args.length == 2 && (first.equals("info") || (admin && List.of("give", "take").contains(first)))) {
             return PlayerTargets.suggest(live.server(), sender, args[1], viewer -> true);
         } else if (admin && args.length == 3 && first.equals("edit")) {
-            options.addAll(List.of("tag", "title", "weight", "style", "team"));
+            options.addAll(List.of("tag", "title", "weight", "style", "team", "groups"));
         } else if (admin && args.length == 4 && first.equals("edit") && args[2].equalsIgnoreCase("team")) {
             options.addAll(List.of("on", "off"));
         } else if (admin && args.length == 3 && first.equals("delete")) {

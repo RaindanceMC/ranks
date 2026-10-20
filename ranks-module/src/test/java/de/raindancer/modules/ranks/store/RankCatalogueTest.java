@@ -52,6 +52,31 @@ class RankCatalogueTest {
     }
 
     @Test
+    @DisplayName("groups: in ranks.yml link a rank to LuckPerms groups; a bad group name is reported, not used")
+    void groups() throws Exception {
+        Files.writeString(folder.resolve("ranks.yml"), """
+                ranks:
+                  mod:
+                    tag: "<gold>[MOD]"
+                    groups: [Moderator, trial-mod, "two words"]
+                  vip:
+                    tag: "<gold>[VIP]"
+                """);
+        RankCatalogue catalogue = new RankCatalogue(new YamlStore(folder.resolve("ranks.yml")),
+                () -> new ByteArrayInputStream("ranks: {}".getBytes(StandardCharsets.UTF_8)),
+                new YamlStore(folder.resolve("custom-ranks.yml")));
+        catalogue.reload();
+
+        assertThat(catalogue.find("mod")).map(Rank::groups).contains(java.util.List.of("moderator", "trial-mod"));
+        assertThat(catalogue.find("vip")).map(Rank::groups).contains(java.util.List.of("vip"));
+        assertThat(catalogue.problems()).anySatisfy(problem -> assertThat(problem).contains("two words"));
+
+        Rank linked = catalogue.find("vip").orElseThrow().withGroups(java.util.List.of("donor"));
+        assertThat(catalogue.define(linked)).isTrue();
+        assertThat(catalogue.find("vip")).map(Rank::groups).contains(java.util.List.of("donor"));
+    }
+
+    @Test
     @DisplayName("a bad rank is reported and left out; the others still load")
     void problems() throws Exception {
         Files.writeString(folder.resolve("ranks.yml"), """

@@ -5,10 +5,13 @@
 #   team:   true puts whoever holds it in the server's team — listed on its own at the top of the tablist.
 #   weight: 1–99, higher is more senior. Somebody holding several wears the highest unless they pick
 #           another, and the tablist puts higher ranks nearer the top.
+#   groups: the LuckPerms groups that give the rank, e.g. groups: [moderator, trialmod]. Left out, it is
+#           the group named like the rank. Inherited groups count: an admin group inheriting mod holds both.
 #
-# Ranks are given by staff: /rank give <player> <rank>. Somebody in a permission group (LuckPerms) of a
-# rank's name holds that rank too — the staff ranks (support, mod, admin, owner, builder, creator, dev,
-# tester) are given that way, by /promote or in LuckPerms.
+# Ranks and LuckPerms are one thing: being in a rank's group holds the rank, and /rank give and /rank take
+# put somebody in or take them out of the rank's group when that group exists in LuckPerms. A rank without
+# a group (or a server without LuckPerms) is kept in holders.yml instead. The staff ranks (support, mod,
+# admin, owner, builder, creator, dev, tester) have their groups made by /promote.
 ranks:
   owner:
     team: true

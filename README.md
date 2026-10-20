@@ -15,7 +15,7 @@ Needs Java 25 and read access to `packages.tstieh.de` (server ids `packages-rele
 
 ## Plugins
 
-- `ranks-standalone/target/RainsRanks-0.5.1.jar` — also published as `de.raindancer.modules:ranks-standalone:0.5.1`
+- `ranks-standalone/target/RainsRanks-0.7.0.jar` — also published as `de.raindancer.modules:ranks-standalone:0.7.0`
 
 ## Versions
 

@@ -50,7 +50,8 @@ public final class RankAdminMenu extends PaginatedMenu<Rank> implements IRanksSc
         List<String> lore = new ArrayList<>();
         lore.add("<gray>" + MINI.escapeTags(rank.title()) + " <dark_gray>(" + rank.id() + ")");
         lore.add("<gray>Weight <white>" + rank.weight() + "<gray>" + (rank.team() ? ", on the team." : "."));
-        lore.add("<gray>Held by <white>" + services.ranks().holdersOf(rank).size() + "<gray>.");
+        lore.add("<gray>Given by /rank: <white>" + services.ranks().holdersOf(rank).size() + "<gray>.");
+        lore.add("<gray>LuckPerms group: <white>" + String.join(", ", rank.groups()) + "<gray>.");
         lore.add("");
         lore.add("<yellow>Click<gray> to change it.");
         return Icons.of(rank.team() ? Material.GOLDEN_HELMET : Material.LEATHER_HELMET, rank.tag(), lore);
