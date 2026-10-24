@@ -1,0 +1,84 @@
+id: ranks
+title: Ranks
+summary: The [OWNER], [DEV] or [MOD] in front of a name — what holds one, where it shows, and how to wear it.
+intro: |
+  Those little brackets in front of names are not decoration, they are <i>rank</i>. Here is how you get one, wear one, hide one, and what the staff can do about the rest.
+icon: GOLDEN_HELMET
+category: Chat & community
+order: 40
+module: ranks
+aliases: [rank, tag, tags, prefix, badge, badges, team, staff-list]
+keywords: [owner, admin, mod, dev, nametag, tablist, wear, hide, luckperms, group]
+commands: [rank]
+related: [basics]
+sections:
+  - question: What are ranks?
+    title: What ranks are
+    text: |
+      A rank is a tag like [OWNER], [DEV] or [MOD] shown in front of a name. It tells everybody what somebody does here. Ranks come from the staff — nobody buys one by accident — and one person may hold several.
+      Type {run:/rank} to see yours.
+  - question: Where does my rank show?
+    title: Where it shows
+    text: |
+      In up to three places: in chat, above your head, and in the tablist (the player list).
+      Right now: chat {setting:ranks:show.chat|onoff}, above heads {setting:ranks:show.nametag|onoff}, tablist {setting:ranks:show.tablist|onoff}.
+      {if:ranks:players-choose}On top of that you may switch each place off for yourself — see below.{else}You cannot switch them yourself: wherever the server shows ranks, yours shows.{/if}
+  - question: How do I see my ranks?
+    title: Your ranks
+    text: |
+      {run:/rank} opens a menu with every rank you hold, the one you wear, and the three switches. {cmd:/rank info} lists them in chat, and {cmd:/rank info <player>} shows what somebody else holds.
+      No rank? Then the menu says so, politely. Staff hand them out.
+  - question: How do I wear a different rank?
+    title: Wearing a rank
+    when: ranks:players-choose
+    text: |
+      Holding several? Click the one you want in {run:/rank}, or type {cmd:/rank wear <rank>} with its id.
+      {cmd:/rank wear none} shows nothing in front of your name at all — very humble. {cmd:/rank wear auto} goes back to your most senior one, which is what you wear until you pick.
+      You can only wear what you hold: asking for another one is refused with a certain amount of judgment.
+  - question: Which rank do I wear if I hold several?
+    title: The most senior one
+    text: |
+      {if:ranks:players-choose}Unless you picked one yourself, it is the rank with the highest weight — the most senior.{else}The rank with the highest weight — the most senior. The server decides this for you; players cannot pick.{/if}
+      Ranks also stay with you for good: logging out or dying does not take them away.
+  - question: How do I hide my rank somewhere?
+    title: Hiding it
+    when: ranks:players-choose
+    text: |
+      In {run:/rank} click the switch for chat, above your head or the tablist. Or type {cmd:/rank show <chat|nametag|tablist>} to flip one, or add on or off: {cmd:/rank show chat off}.
+      A place the server has switched off stays off, whatever you choose.
+  - question: Why can't I change anything?
+    title: Server decides
+    when: "!ranks:players-choose"
+    text: |
+      The server decides where ranks show and which one you wear, so {cmd:/rank wear} and {cmd:/rank show} are turned down. Bold of you to try, though. Staff can allow it again in /settings.
+  - question: What is the team in the tablist?
+    title: The team
+    when: ranks:team.section
+    text: |
+      Whoever holds a team rank is listed on their own at the top of the tablist, in a section called <white>{setting:ranks:team.name}</white>, with its own count underneath. Everybody else is listed below.
+  - question: Is the tablist sorted by rank?
+    title: Sorting
+    when: ranks:sort-tablist
+    text: |
+      Yes: more senior ranks are listed nearer the top of the tablist. No rank, bottom of the pile. It is not personal.
+  - question: How do I give or take a rank?
+    title: Giving and taking
+    permission: rainsranks.admin
+    text: |
+      {cmd:/rank give <player> <rank>} and {cmd:/rank take <player> <rank>}. The player is told. If the rank is tied to a LuckPerms group, the player is put in or taken out of that group — a rank and its group are one thing.
+      Holding a rank only through a group that <i>inherits</i> it cannot be taken here; the message names the group to change in LuckPerms.
+      {cmd:/rank list} shows every rank with its holders, {cmd:/rank list <rank>} one of them.
+  - question: How do I make and edit ranks?
+    title: Managing ranks
+    permission: rainsranks.admin
+    text: |
+      {run:/rank manage} opens the editor: paint tags, rename, make a new rank, delete one. The same from chat:
+      {cmd:/rank create <id> <tag>} — e.g. <white>vip VIP</white>; plain text gets brackets.
+      {cmd:/rank edit <id> tag|title|weight|style|team|groups <value>} — weight runs 1 to 99, team is on or off, groups are LuckPerms groups separated by commas (or none), style takes colours like gold or #ff5500 plus bold, italic, animated, or reset.
+      {cmd:/rank delete <id> confirm} removes it for everybody who held it.
+      Changes are kept in <white>custom-ranks.yml</white>; <white>ranks.yml</white> stays as you wrote it. After editing a file by hand, {run:/rank reload}.
+  - question: What does a rank's tag look like?
+    title: Tags
+    permission: rainsranks.admin
+    text: |
+      A tag is MiniMessage — colours and bold are fine, clicks are not. A tag shows at most 20 characters and, above a head, everything past 32 is cut off; a title is at most 32 characters. Ids are lowercase letters, digits, - and _.
