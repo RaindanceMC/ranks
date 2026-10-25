@@ -32,7 +32,7 @@
         <!-- 0.5.1: its per-player store is Core's KeyedDocument (no change in behaviour). -->
         <!-- 0.6.0: a permission group named like a rank gives that rank (staff ranks follow LuckPerms); support, creator and tester ship, builder is on the team. -->
         <!-- 0.7.0: ranks and LuckPerms groups are linked both ways — groups: per rank, /rank give and take change the group, /rank list counts its members. -->
-        <plugin.version>0.8.0</plugin.version>
+        <plugin.version>0.9.0</plugin.version>
     </properties>
 
     <dependencies>

@@ -131,6 +131,11 @@ public final class RankService implements IRanksService {
                 tag -> Text.styleOnly().deserialize(tag)));
     }
 
+    /** A rank's tag, drawn. */
+    public Component tagOf(Rank rank) {
+        return parsed.computeIfAbsent(rank.tag(), tag -> Text.styleOnly().deserialize(tag));
+    }
+
     public Optional<Rank> shown(UUID player, Place place) {
         Optional<Holder> holder = effective(player);
         return holder.isEmpty() ? Optional.empty()

@@ -24,7 +24,7 @@ public final class RanksModule implements FlexModule {
 
     public static final String BADGE_OWNER = "ranks";
 
-    private static final ModuleInfo INFO = ModuleInfo.of("ranks", "Ranks", "0.8.0")
+    private static final ModuleInfo INFO = ModuleInfo.of("ranks", "Ranks", "0.9.0")
             .describedAs("Ranks like [OWNER], [DEV] or [ADMIN] in front of a name — in chat, above the head and in the tablist, switchable for the server and by every player")
             .by("Raindancer118");
 
@@ -74,6 +74,19 @@ public final class RanksModule implements FlexModule {
         context.closeWith(() -> tablist.rankOf(null));
         tablist.sectionOf(entry -> service.section(entry.player()));
         context.closeWith(() -> tablist.sectionOf(null));
+
+        // Screens for /screen — Core 2.10.0; on an older Core there are simply none.
+        try {
+            var screens = context.core().screens();
+            if (screens != null) {
+                new de.raindancer.modules.ranks.service.RankScreens(service, server,
+                        id -> context.core().vanish().isVanished(id)).register(screens, context.plugin());
+                context.closeWith(() -> de.raindancer.modules.ranks.service.RankScreens.KINDS
+                        .forEach(screens::unregister));
+            }
+        } catch (LinkageError olderCore) {
+            context.log().info("RainsCore is older than 2.10.0: no rank screens until it is updated.");
+        }
 
         RanksCommands.ready(new RanksServices(context.plugin(), context.plugin().getServer(), context.core(),
                 context.log(), context.core().messages(), context.chat().brand(), service));
