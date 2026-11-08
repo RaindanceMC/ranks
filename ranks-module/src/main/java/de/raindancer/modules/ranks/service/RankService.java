@@ -34,6 +34,8 @@ public final class RankService implements IRanksService {
     /** Parsed tags by their markup, so a chat line or a tablist pass parses nothing. */
     private final Map<String, Component> parsed = new ConcurrentHashMap<>();
     private volatile RanksSettings settings;
+    private volatile java.util.function.Function<String, Optional<Component>> badgeOf = tag -> Optional.empty();
+    private volatile java.util.function.BooleanSupplier badgesShown = () -> false;
     private volatile PermissionGroups groups = PermissionGroups.NONE;
     private volatile Predicate<UUID> loaded = player -> false;
 
@@ -127,8 +129,35 @@ public final class RankService implements IRanksService {
         if (place.isEmpty()) {
             return Optional.empty();
         }
-        return shown(player, place.get()).map(rank -> parsed.computeIfAbsent(rank.tag(),
-                tag -> Text.styleOnly().deserialize(tag)));
+        return shown(player, place.get()).map(this::drawn);
+    }
+
+    /** The rank as a badge where badges are shown and it can be one, else its tag. */
+    private Component drawn(Rank rank) {
+        if (settings.badges() && badgesShown.getAsBoolean()) {
+            Optional<Component> badge = badgeOf.apply(rank.tag());
+            if (badge.isPresent()) {
+                return badge.get();
+            }
+        }
+        return tagOf(rank);
+    }
+
+    /**
+     * Where badges come from — Core's — and whether this server shows them. Every rank is made one now and after
+     * every reload, in the catalogue's order, so all servers sharing these ranks agree on them.
+     */
+    public void badges(java.util.function.Function<String, Optional<Component>> badgeOf,
+                       java.util.function.BooleanSupplier shown) {
+        this.badgeOf = badgeOf == null ? tag -> Optional.empty() : badgeOf;
+        this.badgesShown = shown == null ? () -> false : shown;
+        makeBadges();
+    }
+
+    private void makeBadges() {
+        for (Rank rank : ranks()) {
+            badgeOf.apply(rank.tag());
+        }
     }
 
     /** A rank's tag, drawn. */
@@ -394,6 +423,7 @@ public final class RankService implements IRanksService {
     public int reload() {
         int count = catalogue.reload();
         parsed.clear();
+        makeBadges();
         return count;
     }
 

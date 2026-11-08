@@ -44,7 +44,18 @@ public record RanksSettings(
 
         @In("ranks") @Title("What the team is called")
         @Describe("The name of that section in the tablist.")
-        @Key("team.name") String teamName) {
+        @Key("team.name") String teamName,
 
-    public static final RanksSettings DEFAULTS = new RanksSettings(true, true, true, true, true, true, "Team");
+        @In("ranks") @Title("Ranks as badges")
+        @Describe("Each rank drawn as a coloured badge in its tag's colours instead of as text — on a server whose "
+                + "pack is required, where every player has it. Elsewhere the text tag stays.")
+        @Key("badges") boolean badges) {
+
+    public static final RanksSettings DEFAULTS = new RanksSettings(true, true, true, true, true, true, "Team", true);
+
+    /** Before badges: they are on. */
+    public RanksSettings(boolean chat, boolean nametag, boolean tablist, boolean playersChoose, boolean sortTablist,
+                         boolean teamSection, String teamName) {
+        this(chat, nametag, tablist, playersChoose, sortTablist, teamSection, teamName, true);
+    }
 }

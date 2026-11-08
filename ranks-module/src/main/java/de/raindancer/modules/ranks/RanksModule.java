@@ -67,6 +67,7 @@ public final class RanksModule implements FlexModule {
         service.linkTo(groups, player -> server.getPlayer(player) != null);
         context.closeWith(service::unlink);
 
+        service.badges(tag -> context.core().badges().register(tag), () -> context.core().badgesShown());
         NameBadges.registerPlaced(BADGE_OWNER, service::badge);
         context.closeWith(() -> NameBadges.unregister(BADGE_OWNER));
         TablistModel tablist = context.core().tablists().model();

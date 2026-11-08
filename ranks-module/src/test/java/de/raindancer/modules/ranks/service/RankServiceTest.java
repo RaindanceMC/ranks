@@ -48,6 +48,44 @@ class RankServiceTest {
     }
 
     @Test
+    @DisplayName("every rank is made a badge as the ranks are read, in their order; it shows where the server shows "
+            + "badges and the setting is on, the text tag everywhere else")
+    void badges() {
+        java.util.List<String> made = new java.util.ArrayList<>();
+        boolean[] shown = {false};
+        service.badges(tag -> {
+            made.add(tag);
+            return tag.contains("OWNER")
+                    ? java.util.Optional.of(net.kyori.adventure.text.Component.text("<owner badge>"))
+                    : java.util.Optional.empty();
+        }, () -> shown[0]);
+        assertThat(made).containsExactlyElementsOf(service.ranks().stream().map(Rank::tag).toList());
+
+        service.give(ADA, owner);
+        assertThat(badge(NameBadges.Place.CHAT)).as("no pack required here").isEqualTo("[OWNER]");
+        shown[0] = true;
+        assertThat(badge(NameBadges.Place.CHAT)).isEqualTo("<owner badge>");
+        assertThat(badge(NameBadges.Place.NAMETAG)).isEqualTo("<owner badge>");
+
+        RanksSettings d = RanksSettings.DEFAULTS;
+        service.settings(new RanksSettings(d.chat(), d.nametag(), d.tablist(), d.playersChoose(), d.sortTablist(),
+                d.teamSection(), d.teamName(), false));
+        assertThat(badge(NameBadges.Place.CHAT)).as("badges switched off").isEqualTo("[OWNER]");
+
+        made.clear();
+        service.reload();
+        assertThat(made).as("read again, made again").isNotEmpty();
+    }
+
+    @Test
+    @DisplayName("a rank whose tag cannot be a badge keeps its text tag")
+    void noBadge() {
+        service.badges(tag -> java.util.Optional.empty(), () -> true);
+        service.give(ADA, dev);
+        assertThat(badge(NameBadges.Place.CHAT)).isEqualTo("[DEV]");
+    }
+
+    @Test
     @DisplayName("a given rank is the badge in chat, above the head and in the tablist")
     void given() {
         assertThat(badge(NameBadges.Place.CHAT)).isEmpty();
