@@ -79,8 +79,11 @@ public final class RankAdminMenu extends PaginatedMenu<Rank> implements IRanksSc
         }
         super.render();
         toolbar(4, Icons.of(Material.ANVIL, "<white>New rank",
-                "<gray>Starts at weight 50 with the tag you type.", "", "<gray>Click, then type its id and its tag,", "<gray>e.g. <white>vip VIP</white>."),
-                click -> IRanksScreen.ask(services, viewer, this, "ranks.ask.new", typed -> {
+                "<gray>Starts at weight 50 with the tag you type.", "", "<gray>Click to type its id, then its tag,", "<gray>e.g. <white>vip<gray>, then <white>VIP</white>."),
+                // Two questions in the game's dialog; the second answers as the one line the old chat prompt took.
+                click -> IRanksScreen.askInWindow(services, viewer, this, "The new rank's id, e.g. vip", "", 24,
+                        rankId -> IRanksScreen.askInWindow(services, viewer, this, "Its tag, e.g. VIP", "", 64, tag -> {
+                    String typed = rankId + " " + tag;
                     if (!viewer.hasPermission(PermissionNodes.ADMIN)) {
                         return;
                     }
@@ -90,7 +93,7 @@ public final class RankAdminMenu extends PaginatedMenu<Rank> implements IRanksSc
                         return;
                     }
                     answer(services.ranks().create(words[0].toLowerCase(java.util.Locale.ROOT), words[1], 50));
-                }));
+                })));
     }
 
     private void answer(Outcome outcome) {

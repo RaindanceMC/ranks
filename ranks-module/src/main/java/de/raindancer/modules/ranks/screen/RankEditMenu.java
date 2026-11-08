@@ -70,13 +70,13 @@ public final class RankEditMenu extends Menu implements IRanksScreen {
                         .onChange(style -> change(() -> services.ranks().restyle(id, style)))
                         .open());
         band(MenuLayout.RULES, 3, Icons.of(Material.OAK_SIGN, "<white>Tag text",
-                "<gray>" + MINI.escapeTags(STYLES.lettersOf(rank.tag())), "", "<gray>Click, then type it.",
+                "<gray>" + MINI.escapeTags(STYLES.lettersOf(rank.tag())), "", "<gray>Click to type it.",
                 "<dark_gray>Plain text gets brackets; typing markup", "<dark_gray>keeps it as written."),
-                click -> IRanksScreen.ask(services, viewer, this, "ranks.ask.tag",
+                click -> IRanksScreen.askInWindow(services, viewer, this, "The rank's tag", rank.tag(), 64,
                         typed -> change(() -> services.ranks().retag(id, typed))));
         band(MenuLayout.RULES, 5, Icons.of(Material.WRITABLE_BOOK, "<white>Title",
-                "<gray>" + MINI.escapeTags(rank.title()), "", "<gray>Click, then type it."),
-                click -> IRanksScreen.ask(services, viewer, this, "ranks.ask.title",
+                "<gray>" + MINI.escapeTags(rank.title()), "", "<gray>Click to type it."),
+                click -> IRanksScreen.askInWindow(services, viewer, this, "The rank's title", rank.title(), 48,
                         typed -> change(() -> services.ranks().rename(id, typed))));
         band(MenuLayout.RULES, 7, Icons.of(rank.team() ? Material.LIME_DYE : Material.GRAY_DYE,
                 "<white>On the team: " + (rank.team() ? "<green>yes" : "<gray>no"),

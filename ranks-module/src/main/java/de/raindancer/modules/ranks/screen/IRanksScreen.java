@@ -18,6 +18,24 @@ public interface IRanksScreen {
      * Asks for a line of text in chat — the one thing a menu cannot ask — then reopens {@code back}.
      * "cancel" leaves things as they are.
      */
+    /** Asks for a short text in the game's own dialog and reopens {@code back} afterwards, answered or not. */
+    static void askInWindow(RanksServices services, Player viewer, Menu back, String title, String start, int longest,
+                            Consumer<String> answer) {
+        de.raindancer.core.ui.prompt.AnvilInput.open(viewer, title, start == null ? "" : start,
+                de.raindancer.core.ui.prompt.Parsers.text(longest),
+                typed -> {
+                    answer.accept(typed);
+                    if (back != null) {
+                        back.open();
+                    }
+                },
+                () -> {
+                    if (back != null) {
+                        back.open();
+                    }
+                });
+    }
+
     static void ask(RanksServices services, Player viewer, Menu back, String questionKey, Consumer<String> answer) {
         viewer.closeInventory();
         boolean asking = services.core().prompts().ask(viewer.getUniqueId(), "ranks", TO_ANSWER,
