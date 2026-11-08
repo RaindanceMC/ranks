@@ -53,7 +53,7 @@ public final class RankScreens {
             return title.append(MINI.deserialize("\n<gray>None — ranks are given by the team"));
         }
         Rank rank = worn.get();
-        Component text = title.append(Component.newline()).append(ranks.tagOf(rank))
+        Component text = title.append(Component.newline()).append(ranks.drawn(rank))
                 .append(MINI.deserialize(" <white>" + MINI.escapeTags(rank.title())));
         if (!rank.description().isEmpty()) {
             text = text.append(MINI.deserialize("\n<gray>" + MINI.escapeTags(rank.description().get(0))));
@@ -69,7 +69,7 @@ public final class RankScreens {
             return text.append(MINI.deserialize("\n<gray>Nobody right now"));
         }
         for (var entry : entries.stream().limit(SHOWN).toList()) {
-            text = text.append(Component.newline()).append(ranks.tagOf(entry.rank()))
+            text = text.append(Component.newline()).append(ranks.drawn(entry.rank()))
                     .append(MINI.deserialize(" <white>" + MINI.escapeTags(entry.name())));
         }
         String more = rule.more(entries.size(), SHOWN);
@@ -83,7 +83,7 @@ public final class RankScreens {
             return text.append(MINI.deserialize("\n<gray>Nobody online holds a rank"));
         }
         for (var count : counts.stream().limit(SHOWN).toList()) {
-            text = text.append(Component.newline()).append(ranks.tagOf(count.rank()))
+            text = text.append(Component.newline()).append(ranks.drawn(count.rank()))
                     .append(MINI.deserialize(" <white>" + count.online()));
         }
         String more = rule.more(counts.size(), SHOWN);

@@ -78,6 +78,58 @@ class RankServiceTest {
     }
 
     @Test
+    @DisplayName("wherever a rank is named — messages, menus, screens — it is the badge too, as markup and drawn")
+    void namedAsBadge() {
+        boolean[] shown = {false};
+        net.kyori.adventure.text.Component badge = net.kyori.adventure.text.Component.text("\uF900\uF901")
+                .font(net.kyori.adventure.key.Key.key("rainscore", "badges"));
+        service.badges(tag -> tag.contains("MOD") ? java.util.Optional.of(badge) : java.util.Optional.empty(),
+                () -> shown[0]);
+        Rank mod = service.rank("mod").orElseThrow();
+        assertThat(service.shownTag(mod)).isEqualTo(mod.tag());
+        assertThat(Text.plain(service.drawn(mod))).isEqualTo("[MOD]");
+        shown[0] = true;
+        assertThat(service.shownTag(mod)).contains("rainscore:badges").contains("\uF900");
+        assertThat(service.drawn(mod)).isEqualTo(badge);
+        net.kyori.adventure.text.Component line = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                .deserialize("<green>You are " + service.shownTag(mod) + " <green>now.");
+        assertThat(Text.plain(line)).isEqualTo("You are \uF900\uF901 now.");
+        java.util.List<String> fonted = new java.util.ArrayList<>();
+        runs(line, null, fonted);
+        assertThat(fonted).as("only the badge is in the badge font").containsExactly("\uF900\uF901");
+        assertThat(fontOf(line, "\uF900")).isEqualTo(net.kyori.adventure.key.Key.key("rainscore", "badges"));
+    }
+
+    private static void runs(net.kyori.adventure.text.Component c, net.kyori.adventure.key.Key inherited,
+                             java.util.List<String> fonted) {
+        net.kyori.adventure.key.Key font = c.font() != null ? c.font() : inherited;
+        if (c instanceof net.kyori.adventure.text.TextComponent t && !t.content().isEmpty() && font != null) {
+            fonted.add(t.content());
+        }
+        c.children().forEach(child -> runs(child, font, fonted));
+    }
+
+    /** The font the first text starting with {@code text} is drawn in, its parents' included. */
+    private static net.kyori.adventure.key.Key fontOf(net.kyori.adventure.text.Component c, String text) {
+        return find(c, text, null);
+    }
+
+    private static net.kyori.adventure.key.Key find(net.kyori.adventure.text.Component c, String text,
+                                                    net.kyori.adventure.key.Key inherited) {
+        net.kyori.adventure.key.Key font = c.font() != null ? c.font() : inherited;
+        if (c instanceof net.kyori.adventure.text.TextComponent t && t.content().startsWith(text)) {
+            return font;
+        }
+        for (net.kyori.adventure.text.Component child : c.children()) {
+            net.kyori.adventure.key.Key found = find(child, text, font);
+            if (found != null || child instanceof net.kyori.adventure.text.TextComponent t && t.content().startsWith(text)) {
+                return found;
+            }
+        }
+        return null;
+    }
+
+    @Test
     @DisplayName("a rank whose tag cannot be a badge keeps its text tag")
     void noBadge() {
         service.badges(tag -> java.util.Optional.empty(), () -> true);

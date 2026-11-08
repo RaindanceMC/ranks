@@ -132,8 +132,22 @@ public final class RankService implements IRanksService {
         return shown(player, place.get()).map(this::drawn);
     }
 
+    /** {@link #drawn} as MiniMessage, for messages and menus written in markup. */
+    public String shownTag(Rank rank) {
+        Component drawn = drawn(rank);
+        if (drawn == tagOf(rank)) {
+            return rank.tag();
+        }
+        // Spelled out and closed: MiniMessage's own serializer leaves the font open at the end, and a message the
+        // badge is put into would draw the rest of its sentence in it — as boxes.
+        String font = drawn.font() == null ? "rainscore:badges" : drawn.font().asString();
+        return "<font:" + font + "><white><!bold><!italic><shadow:#00000000>"
+                + net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().escapeTags(Text.plain(drawn))
+                + "</font>";
+    }
+
     /** The rank as a badge where badges are shown and it can be one, else its tag. */
-    private Component drawn(Rank rank) {
+    public Component drawn(Rank rank) {
         if (settings.badges() && badgesShown.getAsBoolean()) {
             Optional<Component> badge = badgeOf.apply(rank.tag());
             if (badge.isPresent()) {

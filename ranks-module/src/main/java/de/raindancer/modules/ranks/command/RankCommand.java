@@ -87,11 +87,11 @@ public final class RankCommand implements IRanksCommand {
                     live.messages().send(player, "ranks.wear-none");
                 } else {
                     live.ranks().worn(player.getUniqueId()).ifPresentOrElse(
-                            worn -> live.messages().send(player, "ranks.wear", "rank", new Markup(worn.tag())),
+                            worn -> live.messages().send(player, "ranks.wear", "rank", new Markup(live.ranks().shownTag(worn))),
                             () -> live.messages().send(player, "ranks.none-yours"));
                 }
             }
-            case NOT_HELD -> live.messages().send(player, "ranks.not-yours", "rank", new Markup(rank.orElseThrow().tag()));
+            case NOT_HELD -> live.messages().send(player, "ranks.not-yours", "rank", new Markup(live.ranks().shownTag(rank.orElseThrow())));
             default -> tellRefusal(live, player, outcome);
         }
     }
@@ -150,13 +150,13 @@ public final class RankCommand implements IRanksCommand {
 
     private static void tellChange(RanksServices live, CommandSender sender, OfflinePlayer target, String name,
                                    Rank rank, boolean give, Outcome outcome) {
-        Markup tag = new Markup(rank.tag());
+        Markup tag = tagFor(live, sender, rank);
         switch (outcome) {
             case DONE -> {
                 live.messages().send(sender, give ? "ranks.given" : "ranks.taken", "player", name, "rank", tag);
                 Player online = target.getPlayer();
                 if (online != null && !online.equals(sender)) {
-                    live.messages().send(online, give ? "ranks.given-you" : "ranks.taken-you", "rank", tag);
+                    live.messages().send(online, give ? "ranks.given-you" : "ranks.taken-you", "rank", tagFor(live, online, rank));
                 }
             }
             case ALREADY -> live.messages().send(sender, "ranks.already-holds", "player", name, "rank", tag);
@@ -272,7 +272,7 @@ public final class RankCommand implements IRanksCommand {
                 List<String> names = live.ranks().everyHolderOf(rank).stream()
                         .map(id -> live.core().identities().nameOf(id).orElse(id.toString().substring(0, 8)))
                         .sorted(String.CASE_INSENSITIVE_ORDER).toList();
-                live.messages().send(sender, "ranks.list-line", "rank", new Markup(rank.tag()), "id", rank.id(),
+                live.messages().send(sender, "ranks.list-line", "rank", tagFor(live, sender, rank), "id", rank.id(),
                         "count", String.valueOf(names.size()), "players", names.isEmpty() ? "—" : String.join(", ", names),
                         "groups", String.join(", ", rank.groups()));
             }
@@ -305,7 +305,7 @@ public final class RankCommand implements IRanksCommand {
         Optional<Rank> worn = live.ranks().worn(target.getUniqueId());
         for (Rank rank : held) {
             live.messages().send(sender, worn.filter(rank::equals).isPresent() ? "ranks.info-worn" : "ranks.info-line",
-                    "rank", new Markup(rank.tag()), "title", rank.title());
+                    "rank", tagFor(live, sender, rank), "title", rank.title());
         }
     }
 
@@ -369,4 +369,10 @@ public final class RankCommand implements IRanksCommand {
     public String permission() {
         return PermissionNodes.USE;
     }
+
+    /** The badge for a player, the tag's text for the console — which has no font to draw a badge with. */
+    private static Markup tagFor(RanksServices live, CommandSender to, Rank rank) {
+        return new Markup(to instanceof org.bukkit.entity.Player ? live.ranks().shownTag(rank) : rank.tag());
+    }
+
 }

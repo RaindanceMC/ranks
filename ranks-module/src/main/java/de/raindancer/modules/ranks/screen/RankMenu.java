@@ -59,10 +59,10 @@ public final class RankMenu extends Menu implements IRanksScreen {
         } else if (worn.isEmpty()) {
             about.add("<gray>You are wearing none of your ranks.");
         } else {
-            about.add("<gray>Wearing " + worn.get().tag() + " <gray>— " + MINI.escapeTags(worn.get().title()));
+            about.add("<gray>Wearing " + services.ranks().shownTag(worn.get()) + " <gray>— " + MINI.escapeTags(worn.get().title()));
         }
         band(MenuLayout.WHO, 4, Icons.head(viewer.getUniqueId(),
-                worn.map(rank -> rank.tag() + " ").orElse("") + "<white>" + MINI.escapeTags(viewer.getName()), about),
+                worn.map(rank -> services.ranks().shownTag(rank) + " ").orElse("") + "<white>" + MINI.escapeTags(viewer.getName()), about),
                 click -> { });
 
         for (int index = 0; index < Place.values().length; index++) {
@@ -77,7 +77,7 @@ public final class RankMenu extends Menu implements IRanksScreen {
             rank.description().forEach(line -> lore.add("<gray>" + MINI.escapeTags(line)));
             lore.add("");
             lore.add(wearing ? "<green>You are wearing this one." : "<yellow>Click<gray> to wear it.");
-            ItemStack icon = Icons.of(wearing ? Material.GOLDEN_HELMET : Material.LEATHER_HELMET, rank.tag(), lore);
+            ItemStack icon = Icons.of(wearing ? Material.GOLDEN_HELMET : Material.LEATHER_HELMET, services.ranks().shownTag(rank), lore);
             band(MenuLayout.LAND, index + 1, settings.playersChoose(), icon, "The server picks for you", click -> {
                 answer(services.ranks().wear(viewer.getUniqueId(), rank.id()));
             });

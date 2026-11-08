@@ -54,7 +54,7 @@ public final class RankAdminMenu extends PaginatedMenu<Rank> implements IRanksSc
         lore.add("<gray>LuckPerms group: <white>" + String.join(", ", rank.groups()) + "<gray>.");
         lore.add("");
         lore.add("<yellow>Click<gray> to change it.");
-        return Icons.of(rank.team() ? Material.GOLDEN_HELMET : Material.LEATHER_HELMET, rank.tag(), lore);
+        return Icons.of(rank.team() ? Material.GOLDEN_HELMET : Material.LEATHER_HELMET, services.ranks().shownTag(rank), lore);
     }
 
     @Override
