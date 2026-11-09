@@ -3,6 +3,7 @@ package de.raindancer.modules.ranks;
 import de.raindancer.core.data.settings.SettingsStore;
 import de.raindancer.core.data.store.YamlStore;
 import de.raindancer.core.ui.identity.NameBadges;
+import de.raindancer.core.ui.identity.RankTitles;
 import de.raindancer.core.ui.tablist.TablistModel;
 import de.raindancer.modules.api.FlexModule;
 import de.raindancer.modules.api.ModuleCommand;
@@ -24,7 +25,7 @@ public final class RanksModule implements FlexModule {
 
     public static final String BADGE_OWNER = "ranks";
 
-    private static final ModuleInfo INFO = ModuleInfo.of("ranks", "Ranks", "0.12.0")
+    private static final ModuleInfo INFO = ModuleInfo.of("ranks", "Ranks", "0.12.1")
             .describedAs("Ranks like [OWNER], [DEV] or [ADMIN] in front of a name — in chat, above the head and in the tablist, switchable for the server and by every player")
             .by("Raindancer118");
 
@@ -74,6 +75,17 @@ public final class RanksModule implements FlexModule {
         service.badges(tag -> context.core().badges().register(tag), () -> context.core().badgesShown());
         NameBadges.registerPlaced(BADGE_OWNER, service::badge);
         context.closeWith(() -> NameBadges.unregister(BADGE_OWNER));
+        // Core 2.77.0: the Discord card names the rank somebody wears. The question comes off the server thread.
+        try {
+            RankTitles.Source titles = player -> {
+                service.loadGroups(player);
+                return service.worn(player).map(rank -> rank.title());
+            };
+            RankTitles.provide(titles);
+            context.closeWith(() -> RankTitles.withdraw(titles));
+        } catch (LinkageError olderCore) {
+            context.log().info("RainsCore is older than 2.77.0: other plugins cannot ask for the rank title.");
+        }
         TablistModel tablist = context.core().tablists().model();
         tablist.rankOf(entry -> service.sortWeight(entry.player()));
         context.closeWith(() -> tablist.rankOf(null));
