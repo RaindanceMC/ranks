@@ -11,6 +11,7 @@ ranks:
   usage-show: "<gray>/rank show <chat|nametag|tablist> [on|off] <dark_gray>— where your rank goes in front of your name"
   unknown: "<red>There is no rank called <white><name></white>. Making one up does not count. <gray><white>/rank list</white> shows the real ones."
   never-here: "<red><white><player></white> has never been on this server."
+  no-such-player: "<red>There is no player called <white><player></white> — Mojang does not know that name either."
   only-a-player: "<red>Only a player wears a rank. The console is above all that."
   not-saved: "<red>That could not be saved, so nothing changed. Staff: holders.yml cannot be read."
   choosing-off: "<red>The server decides where ranks show, not you. Bold of you to try, though."

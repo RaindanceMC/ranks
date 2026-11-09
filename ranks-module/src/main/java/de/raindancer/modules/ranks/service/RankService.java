@@ -38,6 +38,9 @@ public final class RankService implements IRanksService {
     private volatile java.util.function.BooleanSupplier badgesShown = () -> false;
     private volatile PermissionGroups groups = PermissionGroups.NONE;
     private volatile Predicate<UUID> loaded = player -> false;
+    private volatile java.util.concurrent.Executor loader;
+    private final java.util.Map<UUID, Set<String>> groupsSeen = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Set<UUID> loading = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     public RankService(RankCatalogue catalogue, HolderBook book, RanksSettings settings) {
         this.catalogue = catalogue;
@@ -62,8 +65,53 @@ public final class RankService implements IRanksService {
      * @param loaded whose groups may be asked for while drawing a badge — the online, whose groups are in memory
      */
     public void linkTo(PermissionGroups permissionGroups, Predicate<UUID> loaded) {
+        linkTo(permissionGroups, loaded, null);
+    }
+
+    /**
+     * As {@link #linkTo(PermissionGroups, Predicate)}; an offline player's groups are then loaded on {@code loader}
+     * (never the server thread) the first time they are wanted and kept, so a statue or a menu can draw their rank.
+     */
+    public void linkTo(PermissionGroups permissionGroups, Predicate<UUID> loaded, java.util.concurrent.Executor loader) {
         this.groups = permissionGroups == null ? PermissionGroups.NONE : permissionGroups;
         this.loaded = loaded == null ? player -> false : loaded;
+        this.loader = loader;
+        groupsSeen.clear();
+        loading.clear();
+    }
+
+    /** Somebody's groups changed (null: anybody's may have): what is kept of them is dropped and loaded again when needed. */
+    public void groupsChanged(UUID player) {
+        if (player == null) {
+            groupsSeen.clear();
+        } else {
+            groupsSeen.remove(player);
+        }
+    }
+
+    /** Loads an offline player's groups into the kept ones. Blocks: never on the server thread. */
+    public void loadGroups(UUID player) {
+        if (loaded.test(player)) {
+            return;
+        }
+        try {
+            groupsSeen.put(player, Set.copyOf(groups.groupsOf(player)));
+        } finally {
+            loading.remove(player);
+        }
+    }
+
+    private Set<String> groupsForDrawing(UUID player) {
+        if (loaded.test(player)) {
+            Set<String> now = Set.copyOf(groups.groupsOf(player));
+            groupsSeen.put(player, now);
+            return now;
+        }
+        Set<String> kept = groupsSeen.get(player);
+        if (kept == null && loader != null && loading.add(player)) {
+            loader.execute(() -> loadGroups(player));
+        }
+        return kept == null ? Set.of() : kept;
     }
 
     public void unlink() {
@@ -73,7 +121,7 @@ public final class RankService implements IRanksService {
     /** Their stored holder with the ranks their groups give added in. */
     private Optional<Holder> effective(UUID player) {
         Optional<Holder> stored = book.find(player);
-        Set<String> through = player == null || !loaded.test(player) ? Set.of() : throughGroups(groups.groupsOf(player));
+        Set<String> through = player == null ? Set.of() : throughGroups(groupsForDrawing(player));
         if (through.isEmpty()) {
             return stored;
         }

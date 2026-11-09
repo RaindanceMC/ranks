@@ -285,6 +285,45 @@ class RankServiceTest {
     }
 
     @Test
+    @DisplayName("an offline player's rank through a group is drawn once their groups were loaded off-thread — a statue of them shows the badge")
+    void offlineThroughLoadedGroups() {
+        FakeGroups groups = new FakeGroups().group("dev");
+        groups.join(ADA, "dev");
+        java.util.List<Runnable> queued = new java.util.ArrayList<>();
+        service.linkTo(groups, player -> false, queued::add);
+
+        assertThat(service.held(ADA)).as("first draw does not block on storage").isEmpty();
+        assertThat(queued).as("but asks for a load, once").hasSize(1);
+        assertThat(service.held(ADA)).isEmpty();
+        assertThat(queued).hasSize(1);
+
+        queued.forEach(Runnable::run);
+
+        assertThat(service.held(ADA)).extracting(Rank::id).containsExactly("dev");
+        assertThat(badge(NameBadges.Place.NAMETAG)).contains("DEV");
+    }
+
+    @Test
+    @DisplayName("a change of somebody's groups makes the next draw load them again")
+    void groupsChangedReloads() {
+        FakeGroups groups = new FakeGroups().group("dev").group("mod");
+        groups.join(ADA, "dev");
+        java.util.List<Runnable> queued = new java.util.ArrayList<>();
+        service.linkTo(groups, player -> false, queued::add);
+        service.held(ADA);
+        queued.forEach(Runnable::run);
+        queued.clear();
+
+        groups.leave(ADA, "dev");
+        groups.join(ADA, "mod");
+        service.groupsChanged(ADA);
+        service.held(ADA);
+        queued.forEach(Runnable::run);
+
+        assertThat(service.held(ADA)).extracting(Rank::id).containsExactly("mod");
+    }
+
+    @Test
     @DisplayName("groups and given ranks add up; the heaviest is worn")
     void groupsAndGiven() {
         service.give(ADA, dev);

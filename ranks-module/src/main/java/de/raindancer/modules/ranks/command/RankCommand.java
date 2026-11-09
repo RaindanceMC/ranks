@@ -136,25 +136,63 @@ public final class RankCommand implements IRanksCommand {
             live.messages().send(sender, "ranks.unknown", "name", args[2]);
             return;
         }
-        Optional<OfflinePlayer> target = PlayerTargets.find(live.server(), sender, args[1]);
-        if (target.isEmpty()) {
-            live.messages().send(sender, "ranks.never-here", "player", args[1]);
-            return;
-        }
-        UUID id = target.get().getUniqueId();
-        String name = PlayerTargets.shownName(target.get());
         // A rank with a LuckPerms group is changed in LuckPerms' storage: not on the server thread.
-        Scheduling.async(live.plugin(), () -> tellChange(live, sender, target.get(), name, rank.get(), give,
-                give ? live.ranks().give(id, rank.get()) : live.ranks().take(id, rank.get())));
+        resolve(live, sender, args[1], (id, name) -> Scheduling.async(live.plugin(), () -> tellChange(live, sender, id,
+                name, rank.get(), give, give ? live.ranks().give(id, rank.get()) : live.ranks().take(id, rank.get()))));
     }
 
-    private static void tellChange(RanksServices live, CommandSender sender, OfflinePlayer target, String name,
+    /**
+     * Who {@code typed} is — a name or selector this server knows, else a uuid, else a name asked of Mojang off the
+     * server thread, so somebody who never joined can be given a rank. Says so when nobody is meant.
+     */
+    private static void resolve(RanksServices live, CommandSender sender, String typed,
+                                java.util.function.BiConsumer<UUID, String> then) {
+        boolean uuid = typed.trim().length() == 36;
+        Optional<OfflinePlayer> known = uuid ? Optional.empty() : PlayerTargets.find(live.server(), sender, typed);
+        if (known.isPresent()) {
+            then.accept(known.get().getUniqueId(), nameOf(live, known.get()));
+            return;
+        }
+        de.raindancer.core.social.presence.ProfileLookup lookup = profileLookup(live);
+        if (lookup == null) {
+            live.messages().send(sender, "ranks.never-here", "player", typed);
+            return;
+        }
+        lookup.byNameOrId(typed).thenAccept(found -> {
+            if (found.isEmpty()) {
+                live.messages().send(sender, "ranks.no-such-player", "player", typed);
+                return;
+            }
+            UUID id = found.get().id();
+            String name = found.get().name() != null ? found.get().name()
+                    : Optional.ofNullable(live.core().identities().nameOf(id).orElse(null)).orElse(id.toString());
+            then.accept(id, name);
+        });
+    }
+
+    private static de.raindancer.core.social.presence.ProfileLookup profileLookup(RanksServices live) {
+        try {
+            return live.core().profileLookup();
+        } catch (LinkageError olderCore) {
+            return null;
+        }
+    }
+
+    /** A name to show: their nickname or real name, else what Core remembers, else the uuid. */
+    private static String nameOf(RanksServices live, OfflinePlayer who) {
+        if (who.getName() != null && !who.getName().isBlank()) {
+            return PlayerTargets.shownName(who);
+        }
+        return live.core().identities().nameOf(who.getUniqueId()).orElse(who.getUniqueId().toString());
+    }
+
+    private static void tellChange(RanksServices live, CommandSender sender, UUID target, String name,
                                    Rank rank, boolean give, Outcome outcome) {
         Markup tag = tagFor(live, sender, rank);
         switch (outcome) {
             case DONE -> {
                 live.messages().send(sender, give ? "ranks.given" : "ranks.taken", "player", name, "rank", tag);
-                Player online = target.getPlayer();
+                Player online = live.server().getPlayer(target);
                 if (online != null && !online.equals(sender)) {
                     live.messages().send(online, give ? "ranks.given-you" : "ranks.taken-you", "rank", tagFor(live, online, rank));
                 }
@@ -162,7 +200,7 @@ public final class RankCommand implements IRanksCommand {
             case ALREADY -> live.messages().send(sender, "ranks.already-holds", "player", name, "rank", tag);
             case NOT_HELD -> live.messages().send(sender, "ranks.does-not-hold", "player", name, "rank", tag);
             case INHERITED -> live.messages().send(sender, "ranks.inherited", "player", name, "rank", tag,
-                    "group", live.ranks().inheritedFrom(target.getUniqueId(), rank).orElse("?"));
+                    "group", live.ranks().inheritedFrom(target, rank).orElse("?"));
             case GROUP_FAILED -> live.messages().send(sender, "ranks.group-failed", "group", String.join(", ", rank.groups()));
             default -> tellRefusal(live, sender, outcome);
         }
@@ -270,7 +308,7 @@ public final class RankCommand implements IRanksCommand {
         Scheduling.async(live.plugin(), () -> {
             for (Rank rank : which) {
                 List<String> names = live.ranks().everyHolderOf(rank).stream()
-                        .map(id -> live.core().identities().nameOf(id).orElse(id.toString().substring(0, 8)))
+                        .map(id -> nameOfHolder(live, id))
                         .sorted(String.CASE_INSENSITIVE_ORDER).toList();
                 live.messages().send(sender, "ranks.list-line", "rank", tagFor(live, sender, rank), "id", rank.id(),
                         "count", String.valueOf(names.size()), "players", names.isEmpty() ? "—" : String.join(", ", names),
@@ -280,33 +318,38 @@ public final class RankCommand implements IRanksCommand {
     }
 
     private static void info(RanksServices live, CommandSender sender, String who) {
-        OfflinePlayer target;
         if (who == null) {
-            Optional<Player> self = asPlayer(live, sender);
-            if (self.isEmpty()) {
-                return;
-            }
-            target = self.get();
-        } else {
-            Optional<OfflinePlayer> found = PlayerTargets.find(live.server(), sender, who);
-            if (found.isEmpty()) {
-                live.messages().send(sender, "ranks.never-here", "player", who);
-                return;
-            }
-            target = found.get();
+            asPlayer(live, sender).ifPresent(self -> Scheduling.async(live.plugin(),
+                    () -> tellInfo(live, sender, self.getUniqueId(), PlayerTargets.shownName(self))));
+            return;
         }
-        String name = PlayerTargets.shownName(target);
-        List<Rank> held = live.ranks().held(target.getUniqueId());
+        resolve(live, sender, who, (id, name) -> Scheduling.async(live.plugin(), () -> tellInfo(live, sender, id, name)));
+    }
+
+    /** Off the server thread: an offline player's groups are loaded first, so what they hold through them shows. */
+    private static void tellInfo(RanksServices live, CommandSender sender, UUID target, String name) {
+        live.ranks().loadGroups(target);
+        List<Rank> held = live.ranks().held(target);
         if (held.isEmpty()) {
             live.messages().send(sender, "ranks.info-none", "player", name);
             return;
         }
         live.messages().send(sender, "ranks.info", "player", name);
-        Optional<Rank> worn = live.ranks().worn(target.getUniqueId());
+        Optional<Rank> worn = live.ranks().worn(target);
         for (Rank rank : held) {
             live.messages().send(sender, worn.filter(rank::equals).isPresent() ? "ranks.info-worn" : "ranks.info-line",
                     "rank", tagFor(live, sender, rank), "title", rank.title());
         }
+    }
+
+    /** A holder's name: what Core remembers or Mojang says (remembered from then on), else the start of the uuid. */
+    private static String nameOfHolder(RanksServices live, UUID id) {
+        Optional<String> known = live.core().identities().nameOf(id);
+        if (known.isPresent()) {
+            return known.get();
+        }
+        de.raindancer.core.social.presence.ProfileLookup lookup = profileLookup(live);
+        return (lookup == null ? Optional.<String>empty() : lookup.nameOf(id)).orElse(id.toString().substring(0, 8));
     }
 
     private static void tellRefusal(RanksServices live, CommandSender sender, Outcome outcome) {
