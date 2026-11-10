@@ -44,6 +44,7 @@ public final class RankCatalogue {
     private final Supplier<InputStream> shipped;
     private final YamlStore custom;
     private volatile Map<String, Rank> ranks = Map.of();
+    private volatile Map<String, List<String>> welcomes = Map.of();
     private volatile List<String> problems = List.of();
     private volatile ShippedEntries.Merged lastMerge;
 
@@ -63,7 +64,7 @@ public final class RankCatalogue {
      * "there are no ranks". @return how many ranks there are
      */
     public synchronized int reload() {
-        lastMerge = ShippedEntries.bringUp(store, shipped, "ranks", Set.of());
+        lastMerge = ShippedEntries.bringUp(store, shipped, "ranks", Set.of("welcome"));
         List<String> found = new ArrayList<>();
         Optional<YamlConfiguration> main = store.readIfReadable();
         Optional<YamlConfiguration> overlay = custom == null ? Optional.of(new YamlConfiguration()) : custom.readIfReadable();
@@ -80,9 +81,33 @@ public final class RankCatalogue {
             parse(overlay.get(), found).forEach(read::put);
             overlay.get().getStringList("deleted").forEach(read::remove);
         }
+        Map<String, List<String>> said = new LinkedHashMap<>(welcomesIn(main.get()));
+        if (custom != null) {
+            said.putAll(welcomesIn(overlay.get()));
+        }
+        said.keySet().retainAll(read.keySet());
         ranks = Map.copyOf(read);
+        welcomes = Map.copyOf(said);
         problems = List.copyOf(found);
         return ranks.size();
+    }
+
+    private static Map<String, List<String>> welcomesIn(YamlConfiguration yaml) {
+        Map<String, List<String>> said = new LinkedHashMap<>();
+        ConfigurationSection all = yaml.getConfigurationSection("ranks");
+        if (all != null) {
+            for (String id : all.getKeys(false)) {
+                if (all.isList(id + ".welcome")) {
+                    said.put(id.toLowerCase(Locale.ROOT), List.copyOf(all.getStringList(id + ".welcome")));
+                }
+            }
+        }
+        return said;
+    }
+
+    /** What holding the rank gives, told once to whoever gets it — empty for most. */
+    public List<String> welcome(String id) {
+        return id == null ? List.of() : welcomes.getOrDefault(id.toLowerCase(Locale.ROOT), List.of());
     }
 
     /** Reads again when another server writes either document. Close to stop. */

@@ -15,6 +15,9 @@ ranks:
   only-a-player: "<red>Only a player wears a rank. The console is above all that."
   not-saved: "<red>That could not be saved, so nothing changed. Staff: holders.yml cannot be read."
   choosing-off: "<red>The server decides where ranks show, not you. Bold of you to try, though."
+  welcome:
+    header: "<light_purple>You are <rank> <light_purple>now. Here is what that gives you:"
+    line: "<dark_gray> » <gray><line>"
   given: "<green><white><player></white> is <rank> <green>now."
   given-you: "<green>You are <rank> <green>now. Try not to let it go to your head — it is literally going above it."
   taken: "<gray><white><player></white> is no longer <rank><gray>."

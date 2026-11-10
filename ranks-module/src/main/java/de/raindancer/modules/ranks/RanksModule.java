@@ -25,7 +25,7 @@ public final class RanksModule implements FlexModule {
 
     public static final String BADGE_OWNER = "ranks";
 
-    private static final ModuleInfo INFO = ModuleInfo.of("ranks", "Ranks", "0.12.1")
+    private static final ModuleInfo INFO = ModuleInfo.of("ranks", "Ranks", "0.13.0")
             .describedAs("Ranks like [OWNER], [DEV] or [ADMIN] in front of a name — in chat, above the head and in the tablist, switchable for the server and by every player")
             .by("Raindancer118");
 
@@ -68,7 +68,20 @@ public final class RanksModule implements FlexModule {
         // Offline players' groups are loaded off the server thread the first time they are drawn (statues).
         service.linkTo(groups, player -> server.getPlayer(player) != null,
                 task -> de.raindancer.core.platform.util.Scheduling.async(context.plugin(), task));
-        var groupWatch = groups.onChange(service::groupsChanged);
+        var welcome = new de.raindancer.modules.ranks.listener.WelcomeListener(context.plugin(), service,
+                new de.raindancer.modules.ranks.service.RankWelcome(service, catalogue,
+                        new de.raindancer.modules.ranks.store.WelcomedBook(
+                                YamlStore.network(context.dataFolder().resolve("welcomed.yml")))),
+                context.core().messages());
+        context.listener(welcome);
+        service.onGiven(player -> welcome.check(player, 1));
+        context.closeWith(() -> service.onGiven(null));
+        var groupWatch = groups.onChange(player -> {
+            service.groupsChanged(player);
+            if (player != null) {
+                welcome.check(player, 2);
+            }
+        });
         context.closeWith(groupWatch::close);
         context.closeWith(service::unlink);
 

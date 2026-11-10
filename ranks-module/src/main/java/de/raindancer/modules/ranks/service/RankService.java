@@ -308,14 +308,28 @@ public final class RankService implements IRanksService {
         if (now.editable()) {
             Optional<String> group = rank.groups().stream().filter(now::exists).findFirst();
             if (group.isPresent()) {
-                return now.join(player, group.get()) ? Outcome.DONE : Outcome.GROUP_FAILED;
+                return gained(player, now.join(player, group.get()) ? Outcome.DONE : Outcome.GROUP_FAILED);
             }
         }
-        return book.change(player, holder -> {
+        return gained(player, book.change(player, holder -> {
             Set<String> more = new LinkedHashSet<>(holder.ranks());
             more.add(rank.id());
             return holder.withRanks(more);
-        }) ? Outcome.DONE : Outcome.NOT_SAVED;
+        }) ? Outcome.DONE : Outcome.NOT_SAVED);
+    }
+
+    private volatile java.util.function.Consumer<UUID> onGiven = player -> { };
+
+    /** Told of every rank given here, from the thread that gave it. */
+    public void onGiven(java.util.function.Consumer<UUID> listener) {
+        this.onGiven = listener == null ? player -> { } : listener;
+    }
+
+    private Outcome gained(UUID player, Outcome outcome) {
+        if (outcome == Outcome.DONE) {
+            onGiven.accept(player);
+        }
+        return outcome;
     }
 
     /**

@@ -5,6 +5,7 @@
 #   team:   true puts whoever holds it in the server's team — listed on its own at the top of the tablist.
 #   weight: 1–99, higher is more senior. Somebody holding several wears the highest unless they pick
 #           another, and the tablist puts higher ranks nearer the top.
+#   welcome: lines told once to whoever gets the rank (in game, or on their next join) — what it gives them.
 #   groups: the LuckPerms groups that give the rank, e.g. groups: [moderator, trialmod]. Left out, it is
 #           the group named like the rank. Inherited groups count: an admin group inheriting mod holds both.
 #
@@ -76,6 +77,9 @@ ranks:
     weight: 45
     description:
       - "Makes videos and streams about the server."
+    welcome:
+      - "Found a guild for free with <white>/guild</white>: no price, no hours played first."
+      - "Every cosmetic is yours, free: name styles, particles, teleport looks and weapon skins in <white>/cosmetics</white>."
   tester:
     team: true
     title: "Tester"
