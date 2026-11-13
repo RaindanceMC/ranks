@@ -219,6 +219,7 @@ public final class RankService implements IRanksService {
     private void makeBadges() {
         for (Rank rank : ranks()) {
             badgeOf.apply(rank.tag());
+            rank.styles().values().forEach(badgeOf::apply);
         }
     }
 
@@ -230,12 +231,14 @@ public final class RankService implements IRanksService {
     public Optional<Rank> shown(UUID player, Place place) {
         Optional<Holder> holder = effective(player);
         return holder.isEmpty() ? Optional.empty()
-                : rule.shown(holder.get(), catalogue.byId(), settings, place);
+                : rule.shown(holder.get(), catalogue.byId(), settings, place)
+                        .map(rank -> rank.styled(holder.get().styleOf(rank.id())));
     }
 
     /** The rank they wear wherever it shows — what /rank and the menu call "your rank". */
     public Optional<Rank> worn(UUID player) {
-        return effective(player).flatMap(holder -> rule.worn(holder, catalogue.byId(), settings.playersChoose()));
+        return effective(player).flatMap(holder -> rule.worn(holder, catalogue.byId(), settings.playersChoose())
+                .map(rank -> rank.styled(holder.styleOf(rank.id()))));
     }
 
     /** Their ranks that still exist in ranks.yml, most senior first. */
@@ -380,6 +383,25 @@ public final class RankService implements IRanksService {
             return Outcome.ALREADY;
         }
         return book.change(player, holder -> holder.wearing(wanted)) ? Outcome.DONE : Outcome.NOT_SAVED;
+    }
+
+    /**
+     * Which style of one of their ranks they wear ({@link Rank#styles}); empty is the rank's own tag. Allowed even
+     * where players do not choose which rank shows: the colour of a rank one holds is one's own business.
+     */
+    public Outcome pickStyle(UUID player, String rankId, String style) {
+        String wanted = style == null ? "" : style.toLowerCase(java.util.Locale.ROOT);
+        Optional<Rank> rank = rank(rankId);
+        if (rank.isEmpty() || !ranksOf(player).contains(rank.get().id())) {
+            return Outcome.NOT_HELD;
+        }
+        if (!wanted.isEmpty() && !rank.get().styles().containsKey(wanted)) {
+            return Outcome.INVALID;
+        }
+        if (book.of(player).styleOf(rank.get().id()).equals(wanted)) {
+            return Outcome.ALREADY;
+        }
+        return book.change(player, holder -> holder.styled(rank.get().id(), wanted)) ? Outcome.DONE : Outcome.NOT_SAVED;
     }
 
     /** Switches their own rank in one place. */

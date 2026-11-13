@@ -64,7 +64,7 @@ public final class RankCatalogue {
      * "there are no ranks". @return how many ranks there are
      */
     public synchronized int reload() {
-        lastMerge = ShippedEntries.bringUp(store, shipped, "ranks", Set.of("welcome"));
+        lastMerge = ShippedEntries.bringUp(store, shipped, "ranks", Set.of("welcome", "styles"));
         List<String> found = new ArrayList<>();
         Optional<YamlConfiguration> main = store.readIfReadable();
         Optional<YamlConfiguration> overlay = custom == null ? Optional.of(new YamlConfiguration()) : custom.readIfReadable();
@@ -133,6 +133,8 @@ public final class RankCatalogue {
             yaml.set(path + ".description", rank.description());
             yaml.set(path + ".team", rank.team());
             yaml.set(path + ".groups", rank.ownGroupOnly() ? null : rank.groups());
+            yaml.set(path + ".styles", null);
+            rank.styles().forEach((style, tag) -> yaml.set(path + ".styles." + style, tag));
             List<String> deleted = new ArrayList<>(yaml.getStringList("deleted"));
             deleted.remove(rank.id());
             yaml.set("deleted", deleted);
@@ -237,8 +239,22 @@ public final class RankCatalogue {
                     problems.add(id + ": '" + group + "' cannot be a permission group — letters, digits, - _ . + only.");
                 }
             }
+            Map<String, String> styles = new LinkedHashMap<>();
+            ConfigurationSection styleSection = each.getConfigurationSection("styles");
+            if (styleSection != null) {
+                for (String style : styleSection.getKeys(false)) {
+                    String styleTag = styleSection.getString(style, "");
+                    Optional<String> bad = ID.matcher(style).matches() ? tagProblem(styleTag)
+                            : Optional.of("ids are lowercase letters, digits, - and _.");
+                    if (bad.isPresent()) {
+                        problems.add(id + ": style '" + style + "' — " + bad.get());
+                    } else {
+                        styles.put(style, styleTag);
+                    }
+                }
+            }
             read.put(id, new Rank(id, title.isBlank() ? id : title, tag, weight, each.getStringList("description"),
-                    each.getBoolean("team", false), groups));
+                    each.getBoolean("team", false), groups, styles));
         }
         return Map.copyOf(read);
     }

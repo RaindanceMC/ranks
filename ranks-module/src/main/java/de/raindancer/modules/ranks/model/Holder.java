@@ -10,14 +10,36 @@ import java.util.UUID;
  * @param ranks the rank ids given to them
  * @param worn  which of them they show; empty is "the most senior", {@link #HIDDEN} is none at all
  * @param chat  their own switch for chat; the server's comes first
+ * @param styles per rank id, the style they picked of it ({@link Rank#styles}); none is the rank's own tag
  */
-public record Holder(UUID player, Set<String> ranks, String worn, boolean chat, boolean nametag, boolean tablist) {
+public record Holder(UUID player, Set<String> ranks, String worn, boolean chat, boolean nametag, boolean tablist,
+                     java.util.Map<String, String> styles) {
 
     public static final String HIDDEN = "none";
 
     public Holder {
         ranks = Set.copyOf(new LinkedHashSet<>(ranks == null ? Set.of() : ranks));
         worn = worn == null ? "" : worn;
+        styles = styles == null ? java.util.Map.of() : java.util.Map.copyOf(styles);
+    }
+
+    public Holder(UUID player, Set<String> ranks, String worn, boolean chat, boolean nametag, boolean tablist) {
+        this(player, ranks, worn, chat, nametag, tablist, java.util.Map.of());
+    }
+
+    /** Picks a style of a rank; empty goes back to the rank's own tag. */
+    public Holder styled(String rank, String style) {
+        java.util.Map<String, String> changed = new java.util.HashMap<>(styles);
+        if (style == null || style.isEmpty()) {
+            changed.remove(rank);
+        } else {
+            changed.put(rank, style);
+        }
+        return new Holder(player, ranks, worn, chat, nametag, tablist, changed);
+    }
+
+    public String styleOf(String rank) {
+        return styles.getOrDefault(rank, "");
     }
 
     public static Holder fresh(UUID player) {
@@ -25,18 +47,18 @@ public record Holder(UUID player, Set<String> ranks, String worn, boolean chat, 
     }
 
     public Holder withRanks(Set<String> changed) {
-        return new Holder(player, changed, worn, chat, nametag, tablist);
+        return new Holder(player, changed, worn, chat, nametag, tablist, styles);
     }
 
     public Holder wearing(String id) {
-        return new Holder(player, ranks, id, chat, nametag, tablist);
+        return new Holder(player, ranks, id, chat, nametag, tablist, styles);
     }
 
     public Holder showing(Place place, boolean on) {
         return switch (place) {
-            case CHAT -> new Holder(player, ranks, worn, on, nametag, tablist);
-            case NAMETAG -> new Holder(player, ranks, worn, chat, on, tablist);
-            case TABLIST -> new Holder(player, ranks, worn, chat, nametag, on);
+            case CHAT -> new Holder(player, ranks, worn, on, nametag, tablist, styles);
+            case NAMETAG -> new Holder(player, ranks, worn, chat, on, tablist, styles);
+            case TABLIST -> new Holder(player, ranks, worn, chat, nametag, on, styles);
         };
     }
 
@@ -50,6 +72,6 @@ public record Holder(UUID player, Set<String> ranks, String worn, boolean chat, 
 
     /** Nothing worth a line in the file: no ranks, and every choice still at its default. */
     public boolean isBlank() {
-        return ranks.isEmpty() && worn.isEmpty() && chat && nametag && tablist;
+        return ranks.isEmpty() && worn.isEmpty() && chat && nametag && tablist && styles.isEmpty();
     }
 }

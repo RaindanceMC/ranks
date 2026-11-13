@@ -40,9 +40,15 @@ public final class HolderBook {
         if (each == null) {
             return null;
         }
+        Map<String, String> styles = new HashMap<>();
+        ConfigurationSection picked = each.getConfigurationSection("styles");
+        if (picked != null) {
+            picked.getKeys(false).forEach(rank -> styles.put(rank, picked.getString(rank, "")));
+        }
+        styles.values().removeIf(String::isEmpty);
         Holder holder = new Holder(player, new LinkedHashSet<>(each.getStringList("ranks")),
                 each.getString("wears", ""), each.getBoolean("show.chat", true),
-                each.getBoolean("show.nametag", true), each.getBoolean("show.tablist", true));
+                each.getBoolean("show.nametag", true), each.getBoolean("show.tablist", true), styles);
         return holder.isBlank() ? null : holder;
     }
 
@@ -52,6 +58,8 @@ public final class HolderBook {
         yaml.set(path + ".show.chat", holder.chat());
         yaml.set(path + ".show.nametag", holder.nametag());
         yaml.set(path + ".show.tablist", holder.tablist());
+        yaml.set(path + ".styles", null);
+        holder.styles().forEach((rank, style) -> yaml.set(path + ".styles." + rank, style));
     }
 
     /** Reads the document; a read that fails keeps what is held and refuses changes until one succeeds. */

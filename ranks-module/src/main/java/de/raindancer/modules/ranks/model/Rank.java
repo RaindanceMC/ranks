@@ -11,9 +11,10 @@ import java.util.Locale;
  * @param weight higher is more senior: shown first when somebody holds several, and higher in the tablist
  * @param team   whether holding it puts somebody in the server's team — listed on its own in the tablist
  * @param groups the permission (LuckPerms) groups that give it; none named means the group of the rank's own id
+ * @param styles other tags a holder may pick instead of {@code tag}, by id ({@code rose-gold}) — Prime's colourways
  */
 public record Rank(String id, String title, String tag, int weight, List<String> description, boolean team,
-                   List<String> groups) {
+                   List<String> groups, java.util.Map<String, String> styles) {
 
     public Rank {
         description = description == null ? List.of() : List.copyOf(description);
@@ -23,10 +24,29 @@ public record Rank(String id, String title, String tag, int weight, List<String>
                     .map(group -> group.strip().toLowerCase(Locale.ROOT)).forEach(named::add);
         }
         groups = named.isEmpty() && id != null ? List.of(id) : List.copyOf(named);
+        styles = styles == null ? java.util.Map.of()
+                : java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(styles));
+    }
+
+    public Rank(String id, String title, String tag, int weight, List<String> description, boolean team,
+                List<String> groups) {
+        this(id, title, tag, weight, description, team, groups, java.util.Map.of());
+    }
+
+    /** The rank as it shows with the holder's pick; an unknown or empty pick is its own tag. */
+    public Rank styled(String style) {
+        String picked = style == null ? null : styles.get(style);
+        return picked == null ? this : new Rank(id, title, picked, weight, description, team, groups, styles);
+    }
+
+    /** {@code rose-gold} → {@code Rose gold}. */
+    public static String styleTitle(String style) {
+        String spaced = style.replace('-', ' ').replace('_', ' ');
+        return spaced.isEmpty() ? spaced : Character.toUpperCase(spaced.charAt(0)) + spaced.substring(1);
     }
 
     public Rank(String id, String title, String tag, int weight, List<String> description, boolean team) {
-        this(id, title, tag, weight, description, team, List.of());
+        this(id, title, tag, weight, description, team, List.of(), java.util.Map.of());
     }
 
     /** Not part of the team. */
@@ -40,23 +60,23 @@ public record Rank(String id, String title, String tag, int weight, List<String>
     }
 
     public Rank withTag(String newTag) {
-        return new Rank(id, title, newTag, weight, description, team, groups);
+        return new Rank(id, title, newTag, weight, description, team, groups, styles);
     }
 
     public Rank withTitle(String newTitle) {
-        return new Rank(id, newTitle, tag, weight, description, team, groups);
+        return new Rank(id, newTitle, tag, weight, description, team, groups, styles);
     }
 
     public Rank withWeight(int newWeight) {
-        return new Rank(id, title, tag, newWeight, description, team, groups);
+        return new Rank(id, title, tag, newWeight, description, team, groups, styles);
     }
 
     public Rank withTeam(boolean onTeam) {
-        return new Rank(id, title, tag, weight, description, onTeam, groups);
+        return new Rank(id, title, tag, weight, description, onTeam, groups, styles);
     }
 
     /** Empty goes back to the group of its own id. */
     public Rank withGroups(List<String> newGroups) {
-        return new Rank(id, title, tag, weight, description, team, newGroups);
+        return new Rank(id, title, tag, weight, description, team, newGroups, styles);
     }
 }

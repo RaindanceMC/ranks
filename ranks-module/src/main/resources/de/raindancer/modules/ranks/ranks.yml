@@ -6,6 +6,7 @@
 #   weight: 1–99, higher is more senior. Somebody holding several wears the highest unless they pick
 #           another, and the tablist puts higher ranks nearer the top.
 #   welcome: lines told once to whoever gets the rank (in game, or on their next join) — what it gives them.
+#   styles: other tags a holder may pick instead (/rank style), by id — the same rules as tag. Each is a badge too.
 #   groups: the LuckPerms groups that give the rank, e.g. groups: [moderator, trialmod]. Left out, it is
 #           the group named like the rank. Inherited groups count: an admin group inheriting mod holds both.
 #
@@ -87,3 +88,23 @@ ranks:
     weight: 40
     description:
       - "Tries new features before everybody else does."
+  prime:
+    title: "Prime"
+    tag: "<gradient:#ff3d9a:#ff9ad5><bold>[PRIME]</bold></gradient>"
+    weight: 38
+    description:
+      - "Supports the server with the Prime subscription."
+    welcome:
+      - "Thank you for Prime! Your name can now be painted in <white>/cosmetics</white>, with particles, teleport looks, every weapon and armour skin, and each month's Prime drop."
+      - "Pick the colours of your <white>[PRIME]</white> badge with <white>/rank style</white>."
+      - "Want an image as map art? <white>/prime mapart</white>. Your feature ideas jump the queue."
+    styles:
+      hot-pink: "<gradient:#ff3d9a:#ff9ad5><bold>[PRIME]</bold></gradient>"
+      rose-gold: "<gradient:#ff8fb1:#ffd27a><bold>[PRIME]</bold></gradient>"
+      pink-gold-pink: "<gradient:#ff5fa2:#ffc94a:#ff5fa2><bold>[PRIME]</bold></gradient>"
+      gold-hot-pink: "<gradient:#ffd700:#ff69b4><bold>[PRIME]</bold></gradient>"
+      pure-gold: "<gradient:#ffe08a:#e6a817><bold>[PRIME]</bold></gradient>"
+      hyades: "<gradient:#F6B83D:#ff7eb6><bold>[PRIME]</bold></gradient>"
+      pastel: "<gradient:#ffb3d9:#ffe28a><bold>[PRIME]</bold></gradient>"
+      champagne: "<gradient:#ffe9b0:#d4a017:#ffe9b0><bold>[PRIME]</bold></gradient>"
+      magenta-gold: "<gradient:#d6249f:#fd5949:#fdf497><bold>[PRIME]</bold></gradient>"

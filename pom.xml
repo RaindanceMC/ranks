@@ -22,7 +22,7 @@
     <properties>
         <rainscore.version>2.77.0</rainscore.version>
         <modules-wrapper.version>1.11.0</modules-wrapper.version>
-        <ranks-module.version>0.13.0</ranks-module.version>
+        <ranks-module.version>0.14.0</ranks-module.version>
     </properties>
 
     <modules>

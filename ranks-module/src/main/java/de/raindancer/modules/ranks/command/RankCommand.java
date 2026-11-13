@@ -26,7 +26,7 @@ import java.util.function.Supplier;
 
 /**
  * {@code /rank} opens your ranks; {@code info [player]}, {@code wear <rank|none|auto>},
- * {@code show <place> [on|off]}. Staff: {@code give|take <player> <rank>}, {@code list [rank]}, {@code reload}.
+ * {@code show <place> [on|off]}, {@code style [style|default]} — the colours of the rank you wear. Staff: {@code give|take <player> <rank>}, {@code list [rank]}, {@code reload}.
  */
 public final class RankCommand implements IRanksCommand {
 
@@ -46,6 +46,7 @@ public final class RankCommand implements IRanksCommand {
             case "info" -> info(live, sender, args.length > 1 ? args[1] : null);
             case "wear" -> asPlayer(live, sender).ifPresent(player -> wear(live, player, args));
             case "show" -> asPlayer(live, sender).ifPresent(player -> show(live, player, args));
+            case "style" -> asPlayer(live, sender).ifPresent(player -> style(live, player, args));
             case "give", "take" -> staffChange(live, sender, args, first.equals("give"));
             case "list" -> list(live, sender, args);
             case "manage" -> {
@@ -92,6 +93,39 @@ public final class RankCommand implements IRanksCommand {
                 }
             }
             case NOT_HELD -> live.messages().send(player, "ranks.not-yours", "rank", new Markup(live.ranks().shownTag(rank.orElseThrow())));
+            default -> tellRefusal(live, player, outcome);
+        }
+    }
+
+    /** Lists the styles of the rank they wear, or picks one; {@code default} is the rank's own. */
+    private static void style(RanksServices live, Player player, String[] args) {
+        Optional<Rank> worn = live.ranks().worn(player.getUniqueId()).flatMap(shown -> live.ranks().rank(shown.id()));
+        if (worn.isEmpty()) {
+            live.messages().send(player, "ranks.none-yours");
+            return;
+        }
+        Rank rank = worn.get();
+        if (rank.styles().isEmpty()) {
+            live.messages().send(player, "ranks.style-none", "rank", new Markup(live.ranks().shownTag(rank)));
+            return;
+        }
+        if (args.length < 2) {
+            live.messages().send(player, "ranks.style-list", "rank", new Markup(live.ranks().shownTag(rank)));
+            String picked = live.ranks().holder(player.getUniqueId()).styleOf(rank.id());
+            rank.styles().keySet().forEach(style -> live.messages().send(player,
+                    style.equals(picked) || (picked.isEmpty() && rank.styled(style).tag().equals(rank.tag()))
+                            ? "ranks.style-line-worn" : "ranks.style-line",
+                    "badge", new Markup(live.ranks().shownTag(rank.styled(style))), "style", style,
+                    "title", Rank.styleTitle(style)));
+            return;
+        }
+        String wanted = args[1].toLowerCase(Locale.ROOT);
+        String style = wanted.equals("default") ? "" : wanted;
+        Outcome outcome = live.ranks().pickStyle(player.getUniqueId(), rank.id(), style);
+        switch (outcome) {
+            case DONE, ALREADY -> live.messages().send(player, "ranks.style-picked",
+                    "rank", new Markup(live.ranks().shownTag(rank.styled(style))));
+            case INVALID -> live.messages().send(player, "ranks.style-unknown", "style", args[1]);
             default -> tellRefusal(live, player, outcome);
         }
     }
@@ -377,13 +411,17 @@ public final class RankCommand implements IRanksCommand {
         String first = args.length == 0 ? "" : args[0].toLowerCase(Locale.ROOT);
         List<String> options = new ArrayList<>();
         if (args.length <= 1) {
-            options.addAll(List.of("info", "wear", "show"));
+            options.addAll(List.of("info", "wear", "show", "style"));
             if (admin) {
                 options.addAll(List.of("give", "take", "list", "reload", "manage", "create", "edit", "delete"));
             }
         } else if (args.length == 2 && first.equals("wear") && sender instanceof Player player) {
             live.ranks().held(player.getUniqueId()).forEach(rank -> options.add(rank.id()));
             options.addAll(List.of("none", "auto"));
+        } else if (args.length == 2 && first.equals("style") && sender instanceof Player player) {
+            live.ranks().worn(player.getUniqueId()).flatMap(shown -> live.ranks().rank(shown.id()))
+                    .ifPresent(rank -> options.addAll(rank.styles().keySet()));
+            options.add("default");
         } else if (args.length == 2 && first.equals("show")) {
             for (Place place : Place.values()) {
                 options.add(place.word());

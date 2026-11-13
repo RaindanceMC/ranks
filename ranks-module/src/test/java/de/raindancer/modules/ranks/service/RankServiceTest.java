@@ -59,7 +59,9 @@ class RankServiceTest {
                     ? java.util.Optional.of(net.kyori.adventure.text.Component.text("<owner badge>"))
                     : java.util.Optional.empty();
         }, () -> shown[0]);
-        assertThat(made).containsExactlyElementsOf(service.ranks().stream().map(Rank::tag).toList());
+        assertThat(made).containsExactlyElementsOf(service.ranks().stream()
+                .flatMap(rank -> java.util.stream.Stream.concat(java.util.stream.Stream.of(rank.tag()),
+                        rank.styles().values().stream())).toList());
 
         service.give(ADA, owner);
         assertThat(badge(NameBadges.Place.CHAT)).as("no pack required here").isEqualTo("[OWNER]");
