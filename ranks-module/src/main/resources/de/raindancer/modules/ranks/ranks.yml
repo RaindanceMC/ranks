@@ -95,7 +95,7 @@ ranks:
     description:
       - "Supports the server with the Prime subscription."
     welcome:
-      - "Thank you for Prime! Your name can now be painted in <white>/cosmetics</white>, with particles, teleport looks, every weapon and armour skin, and each month's Prime drop."
+      - "Thank you for Prime! Your name can now be painted in <white>/cosmetics</white>, with particles, teleport looks, the weapon and armour skins (all but a few creator-only ones), and each month's Prime drop."
       - "Pick the colours of your <white>[PRIME]</white> badge with <white>/rank style</white>."
       - "Want an image as map art? <white>/prime mapart</white>. Your feature ideas jump the queue."
     styles:
