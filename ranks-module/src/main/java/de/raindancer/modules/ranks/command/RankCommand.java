@@ -9,6 +9,7 @@ import de.raindancer.modules.ranks.model.Place;
 import de.raindancer.modules.ranks.model.Rank;
 import de.raindancer.modules.ranks.screen.RankAdminMenu;
 import de.raindancer.modules.ranks.screen.RankMenu;
+import de.raindancer.modules.ranks.service.RankService;
 import de.raindancer.modules.ranks.service.RankService.Outcome;
 import de.raindancer.modules.ranks.util.PermissionNodes;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
@@ -269,6 +270,10 @@ public final class RankCommand implements IRanksCommand {
                 outcome = live.ranks().delete(args[1].toLowerCase(Locale.ROOT));
             }
             default -> {
+                if (args.length >= 3 && args[2].equalsIgnoreCase("welcome")) {
+                    welcome(live, sender, args[1].toLowerCase(Locale.ROOT), java.util.Arrays.copyOfRange(args, 3, args.length));
+                    return;
+                }
                 if (args.length < 4) {
                     live.messages().send(sender, "ranks.usage-manage");
                     return;
@@ -315,6 +320,65 @@ public final class RankCommand implements IRanksCommand {
             case NOT_HELD -> live.messages().send(sender, "ranks.unknown", "name", args[1]);
             case INVALID -> live.messages().send(sender, "ranks.invalid");
             default -> tellRefusal(live, sender, outcome);
+        }
+    }
+
+    /**
+     * {@code edit <id> welcome} lists what the rank says to whoever gets it; {@code welcome <n> <text>} sets line n
+     * (one past the last adds one), {@code welcome remove <n>} drops one, {@code welcome clear} says nothing.
+     */
+    private static void welcome(RanksServices live, CommandSender sender, String id, String[] words) {
+        Optional<Rank> rank = live.ranks().rank(id);
+        if (rank.isEmpty()) {
+            live.messages().send(sender, "ranks.unknown", "name", id);
+            return;
+        }
+        List<String> lines = new java.util.ArrayList<>(live.ranks().welcome(id));
+        if (words.length > 0) {
+            String first = words[0].toLowerCase(Locale.ROOT);
+            Integer number = null;
+            try {
+                number = Integer.parseInt(first.equals("remove") && words.length > 1 ? words[1] : first);
+            } catch (NumberFormatException notANumber) {
+                // clear, or a typo: the usage says what works
+            }
+            if (first.equals("clear")) {
+                lines.clear();
+            } else if (first.equals("remove") && number != null && number >= 1 && number <= lines.size()) {
+                lines.remove(number - 1);
+            } else if (!first.equals("remove") && number != null && number >= 1 && number <= lines.size() + 1
+                    && words.length > 1) {
+                String text = String.join(" ", java.util.Arrays.copyOfRange(words, 1, words.length)).strip();
+                if (number <= lines.size()) {
+                    lines.set(number - 1, text);
+                } else {
+                    lines.add(text);
+                }
+            } else {
+                live.messages().send(sender, "ranks.usage-manage");
+                return;
+            }
+            Outcome outcome = live.ranks().rewelcome(id, lines);
+            if (outcome == Outcome.INVALID) {
+                live.messages().send(sender, "ranks.welcome-invalid", "most", RankService.WELCOME_LINES,
+                        "length", RankService.WELCOME_LINE);
+                return;
+            }
+            if (outcome != Outcome.DONE) {
+                tellRefusal(live, sender, outcome);
+                return;
+            }
+            live.messages().send(sender, "ranks.managed");
+        }
+        Markup shown = new Markup(live.ranks().shownTag(rank.get()));
+        List<String> now = live.ranks().welcome(id);
+        if (now.isEmpty()) {
+            live.messages().send(sender, "ranks.welcome-none", "rank", shown);
+            return;
+        }
+        live.messages().send(sender, "ranks.welcome-head", "rank", shown, "id", id);
+        for (int index = 0; index < now.size(); index++) {
+            live.messages().send(sender, "ranks.welcome-line", "number", index + 1, "line", new Markup(now.get(index)));
         }
     }
 

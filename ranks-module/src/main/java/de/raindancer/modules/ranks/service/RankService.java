@@ -455,6 +455,25 @@ public final class RankService implements IRanksService {
         });
     }
 
+    /** At most this many welcome lines, each at most {@link #WELCOME_LINE} characters. */
+    public static final int WELCOME_LINES = 8;
+    public static final int WELCOME_LINE = 300;
+
+    /** What the rank tells whoever gets it, once; empty for nothing. */
+    public List<String> welcome(String id) {
+        return catalogue.welcome(id);
+    }
+
+    public Outcome rewelcome(String id, List<String> lines) {
+        if (lines.size() > WELCOME_LINES || lines.stream().anyMatch(line -> line.isBlank() || line.length() > WELCOME_LINE)) {
+            return Outcome.INVALID;
+        }
+        if (catalogue.find(id).isEmpty()) {
+            return Outcome.NOT_HELD;
+        }
+        return saved(catalogue.rewelcome(id, lines));
+    }
+
     public Outcome rename(String id, String title) {
         if (title == null || title.isBlank() || title.length() > 32) {
             return Outcome.INVALID;

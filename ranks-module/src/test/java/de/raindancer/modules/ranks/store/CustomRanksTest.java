@@ -58,4 +58,23 @@ class CustomRanksTest {
         catalogue.define(new Rank("builder", "Builder", "<yellow>[BUILD]", 50, List.of()));
         assertThat(open().find("builder").map(Rank::tag)).contains("<yellow>[BUILD]");
     }
+
+    @Test
+    @DisplayName("a rank's welcome lines are rewritten in game, kept after a restart; empty means none; the rank stays")
+    void welcomeLines() throws Exception {
+        RankCatalogue catalogue = open();
+        assertThat(catalogue.welcome("prime")).isNotEmpty();
+        String before = Files.readString(folder.resolve("ranks.yml"));
+        Rank prime = catalogue.find("prime").orElseThrow();
+
+        assertThat(catalogue.rewelcome("prime", List.of("Thank you!", "Skins in <white>/cosmetics</white>."))).isTrue();
+        assertThat(catalogue.welcome("prime")).containsExactly("Thank you!", "Skins in <white>/cosmetics</white>.");
+        assertThat(open().welcome("prime")).containsExactly("Thank you!", "Skins in <white>/cosmetics</white>.");
+        assertThat(open().find("prime")).contains(prime);
+        assertThat(Files.readString(folder.resolve("ranks.yml"))).isEqualTo(before);
+
+        assertThat(catalogue.rewelcome("prime", List.of())).isTrue();
+        assertThat(open().welcome("prime")).isEmpty();
+        assertThat(catalogue.rewelcome("nothing-like-it", List.of("x"))).isFalse();
+    }
 }

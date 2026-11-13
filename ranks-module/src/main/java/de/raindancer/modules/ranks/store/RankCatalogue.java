@@ -125,24 +125,45 @@ public final class RankCatalogue {
         if (custom == null || tagProblem(rank.tag()).isPresent() || !ID.matcher(rank.id()).matches()) {
             return false;
         }
+        boolean saved = custom.update(yaml -> write(yaml, rank));
+        if (saved) {
+            reload();
+        }
+        return saved;
+    }
+
+    /**
+     * Rewrites what a rank says to whoever gets it (empty: nothing). Kept in the in-game overlay with the whole rank,
+     * like every other in-game edit. @return false when there is no such rank, no overlay, or it was not saved
+     */
+    public synchronized boolean rewelcome(String id, List<String> lines) {
+        Rank rank = id == null ? null : ranks.get(id.toLowerCase(Locale.ROOT));
+        if (custom == null || rank == null) {
+            return false;
+        }
         boolean saved = custom.update(yaml -> {
-            String path = "ranks." + rank.id();
-            yaml.set(path + ".title", rank.title());
-            yaml.set(path + ".tag", rank.tag());
-            yaml.set(path + ".weight", rank.weight());
-            yaml.set(path + ".description", rank.description());
-            yaml.set(path + ".team", rank.team());
-            yaml.set(path + ".groups", rank.ownGroupOnly() ? null : rank.groups());
-            yaml.set(path + ".styles", null);
-            rank.styles().forEach((style, tag) -> yaml.set(path + ".styles." + style, tag));
-            List<String> deleted = new ArrayList<>(yaml.getStringList("deleted"));
-            deleted.remove(rank.id());
-            yaml.set("deleted", deleted);
+            write(yaml, rank);
+            yaml.set("ranks." + rank.id() + ".welcome", List.copyOf(lines));
         });
         if (saved) {
             reload();
         }
         return saved;
+    }
+
+    private static void write(YamlConfiguration yaml, Rank rank) {
+        String path = "ranks." + rank.id();
+        yaml.set(path + ".title", rank.title());
+        yaml.set(path + ".tag", rank.tag());
+        yaml.set(path + ".weight", rank.weight());
+        yaml.set(path + ".description", rank.description());
+        yaml.set(path + ".team", rank.team());
+        yaml.set(path + ".groups", rank.ownGroupOnly() ? null : rank.groups());
+        yaml.set(path + ".styles", null);
+        rank.styles().forEach((style, tag) -> yaml.set(path + ".styles." + style, tag));
+        List<String> deleted = new ArrayList<>(yaml.getStringList("deleted"));
+        deleted.remove(rank.id());
+        yaml.set("deleted", deleted);
     }
 
     /** Deletes a rank in game — one from ranks.yml as well. @return false when there was none or it was not saved */
