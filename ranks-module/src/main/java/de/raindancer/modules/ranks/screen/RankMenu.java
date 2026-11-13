@@ -65,6 +65,36 @@ public final class RankMenu extends Menu implements IRanksScreen {
                 worn.map(rank -> services.ranks().shownTag(rank) + " ").orElse("") + "<white>" + MINI.escapeTags(viewer.getName()), about),
                 click -> { });
 
+        de.raindancer.modules.ranks.rules.ShowcaseRule.of(services.ranks().ranks(), held).ifPresent(showcase -> {
+            Rank rank = showcase.rank();
+            boolean store = viewer.getServer().getCommandMap().getCommand(rank.id()) != null;
+            List<String> lore = new ArrayList<>();
+            rank.description().forEach(line -> lore.add("<gray>" + MINI.escapeTags(line)));
+            lore.add("");
+            lore.add(showcase.held() ? "<green>You have it. <yellow>Click<gray> to wear it and pick its colours."
+                    : store ? "<yellow>Click<gray> to see what it gives and how to get it."
+                    : "<gray>Ask the team how to get it.");
+            ItemStack icon = Icons.of(Material.LEATHER_HELMET, services.ranks().shownTag(rank), lore);
+            if (icon.getItemMeta() instanceof org.bukkit.inventory.meta.LeatherArmorMeta leather) {
+                leather.setColor(org.bukkit.Color.fromRGB(0xFF4FA6));
+                leather.addItemFlags(org.bukkit.inventory.ItemFlag.HIDE_DYE);
+                icon.setItemMeta(leather);
+            }
+            band(MenuLayout.WHO, 6, icon, click -> {
+                if (showcase.held()) {
+                    // its colours are picked for the rank worn, so it is put on first
+                    if (worn.filter(rank::equals).isEmpty()) {
+                        services.ranks().wear(viewer.getUniqueId(), rank.id());
+                    }
+                    viewer.closeInventory();
+                    viewer.performCommand("rank style");
+                } else if (store) {
+                    viewer.closeInventory();
+                    viewer.performCommand(rank.id());
+                }
+            });
+        });
+
         for (int index = 0; index < Place.values().length; index++) {
             Place place = Place.values()[index];
             toggle(index * 2 + 2, place, settings, holder, held.isEmpty());
