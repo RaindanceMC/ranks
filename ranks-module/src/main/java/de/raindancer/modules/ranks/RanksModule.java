@@ -39,7 +39,6 @@ public final class RanksModule implements FlexModule {
         SettingsStore<RanksSettings> settings = context.settings(RanksSettings.class, RanksSettings.DEFAULTS);
         context.core().messages().defineFrom(RanksModule.class.getResourceAsStream("messages.yml"),
                 context.chat().brand()::chatPrefix);
-        context.core().messages().seriousFrom(RanksModule.class.getResourceAsStream("messages-serious.yml"));
         int registered = PermissionNodes.register(context.plugin().getServer());
         if (registered > 0) {
             context.log().info("{} permission(s) registered.", registered);
