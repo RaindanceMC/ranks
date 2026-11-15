@@ -1,12 +1,12 @@
-# The ranks on this server. Written out once — edit freely, then /rank reload.
+# The ranks on this server. Written out once. Edit freely, then /rank reload.
 #
 #   tag:    what goes in front of the name, in MiniMessage: colours and <bold> are fine, clicks are not.
-#           Keep it short — above a head everything past 32 characters is cut off.
-#   team:   true puts whoever holds it in the server's team — listed on its own at the top of the tablist.
-#   weight: 1–99, higher is more senior. Somebody holding several wears the highest unless they pick
+#           Keep it short: above a head everything past 32 characters is cut off.
+#   team:   true puts whoever holds it in the server's team, listed on its own at the top of the tablist.
+#   weight: 1 to 99, higher is more senior. Somebody holding several wears the highest unless they pick
 #           another, and the tablist puts higher ranks nearer the top.
-#   welcome: lines told once to whoever gets the rank (in game, or on their next join) — what it gives them.
-#   styles: other tags a holder may pick instead (/rank style), by id — the same rules as tag. Each is a badge too.
+#   welcome: lines told once to whoever gets the rank (in game, or on their next join): what it gives them.
+#   styles: other tags a holder may pick instead (/rank style), by id, with the same rules as tag. Each is a badge too.
 #   groups: the LuckPerms groups that give the rank, e.g. groups: [moderator, trialmod]. Left out, it is
 #           the group named like the rank. Inherited groups count: an admin group inheriting mod holds both.
 #
@@ -95,9 +95,9 @@ ranks:
     description:
       - "Supports the server with the Prime subscription."
     welcome:
-      - "Thank you for Prime! Your name can now be painted in <white>/cosmetics</white>, with particles, teleport looks, the weapon and armour skins (all but a few creator-only ones), and each month's Prime drop."
+      - "Thank you for supporting the server with Prime. Your name can now be painted in <white>/cosmetics</white>, with particles, teleport looks, the weapon and armour skins (all but a few creator-only ones), and each month's Prime drop."
       - "Pick the colours of your <white>[PRIME]</white> badge with <white>/rank style</white>."
-      - "Want an image as map art? <white>/prime mapart</white>. Your feature ideas jump the queue."
+      - "Any image can become map art: <white>/prime mapart</white>. Your feature ideas jump the queue."
     styles:
       hot-pink: "<gradient:#ff3d9a:#ff9ad5><bold>[PRIME]</bold></gradient>"
       rose-gold: "<gradient:#ff8fb1:#ffd27a><bold>[PRIME]</bold></gradient>"
