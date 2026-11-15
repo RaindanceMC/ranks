@@ -11,7 +11,7 @@ import org.bukkit.Material;
 /** Where ranks show, for the whole server. The ranks themselves are in ranks.yml. */
 @Settings(id = "ranks", topics = {
         @Topic(path = "ranks", title = "Ranks", icon = Material.GOLDEN_HELMET,
-                description = "[OWNER], [DEV], [ADMIN] in front of a name — and where."),
+                description = "[OWNER], [DEV], [ADMIN] in front of a name, and where."),
 })
 public record RanksSettings(
 
@@ -47,7 +47,7 @@ public record RanksSettings(
         @Key("team.name") String teamName,
 
         @In("ranks") @Title("Ranks as badges")
-        @Describe("Each rank drawn as a coloured badge in its tag's colours instead of as text — on a server whose "
+        @Describe("Each rank drawn as a coloured badge in its tag's colours instead of as text, on a server whose "
                 + "pack is required, where every player has it. Elsewhere the text tag stays.")
         @Key("badges") boolean badges) {
 

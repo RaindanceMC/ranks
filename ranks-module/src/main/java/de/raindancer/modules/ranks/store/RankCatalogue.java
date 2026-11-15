@@ -247,7 +247,7 @@ public final class RankCatalogue {
             }
             int weight = each.getInt("weight", 1);
             if (weight < 1 || weight > 99) {
-                problems.add(id + ": weight " + weight + " is outside 1–99, so it counts as " + Math.clamp(weight, 1, 99) + ".");
+                problems.add(id + ": weight " + weight + " is outside 1 to 99, so it counts as " + Math.clamp(weight, 1, 99) + ".");
                 weight = Math.clamp(weight, 1, 99);
             }
             String title = each.getString("title", "");
@@ -257,7 +257,7 @@ public final class RankCatalogue {
                 if (isGroup(group)) {
                     groups.add(group);
                 } else if (group != null && !group.isBlank()) {
-                    problems.add(id + ": '" + group + "' cannot be a permission group — letters, digits, - _ . + only.");
+                    problems.add(id + ": '" + group + "' cannot be a permission group: letters, digits, - _ . + only.");
                 }
             }
             Map<String, String> styles = new LinkedHashMap<>();
@@ -268,7 +268,7 @@ public final class RankCatalogue {
                     Optional<String> bad = ID.matcher(style).matches() ? tagProblem(styleTag)
                             : Optional.of("ids are lowercase letters, digits, - and _.");
                     if (bad.isPresent()) {
-                        problems.add(id + ": style '" + style + "' — " + bad.get());
+                        problems.add(id + ": style '" + style + "': " + bad.get());
                     } else {
                         styles.put(style, styleTag);
                     }

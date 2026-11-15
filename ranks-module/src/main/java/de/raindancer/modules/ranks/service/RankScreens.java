@@ -50,7 +50,7 @@ public final class RankScreens {
         Component title = MINI.deserialize("<gold><bold>Your rank</bold></gold>");
         var worn = ranks.worn(viewer.id());
         if (worn.isEmpty()) {
-            return title.append(MINI.deserialize("\n<gray>None — ranks are given by the team"));
+            return title.append(MINI.deserialize("\n<gray>None. Ranks are given by the team"));
         }
         Rank rank = worn.get();
         Component text = title.append(Component.newline()).append(ranks.drawn(rank))

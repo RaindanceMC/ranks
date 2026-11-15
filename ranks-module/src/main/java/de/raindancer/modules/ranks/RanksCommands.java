@@ -18,12 +18,12 @@ public final class RanksCommands {
 
     public static List<ModuleCommand> declared() {
         return List.of(
-                ModuleCommand.of("rank", "Your rank — [OWNER], [DEV]… — and where it shows",
+                ModuleCommand.of("rank", "Your rank ([OWNER], [DEV]…) and where it shows",
                                 new RankCommand(RanksCommands::require))
                         .aliased("ranks")
-                        .taking("(nothing) — your ranks and where they show", "info [player]",
+                        .taking("(nothing): your ranks and where they show", "info [player]",
                                 "wear <rank|none|auto>", "show <chat|nametag|tablist> [on|off]",
-                                "give <player> <rank> · take <player> <rank> · list [rank] · reload — staff")
+                                "give <player> <rank> · take <player> <rank> · list [rank] · reload: staff")
                         .needing("rainsranks.use"));
     }
 

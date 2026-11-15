@@ -26,7 +26,7 @@ public final class RanksModule implements FlexModule {
     public static final String BADGE_OWNER = "ranks";
 
     private static final ModuleInfo INFO = ModuleInfo.of("ranks", "Ranks", "0.16.0")
-            .describedAs("Ranks like [OWNER], [DEV] or [ADMIN] in front of a name — in chat, above the head and in the tablist, switchable for the server and by every player")
+            .describedAs("Ranks like [OWNER], [DEV] or [ADMIN] in front of a name: in chat, above the head and in the tablist, switchable for the server and by every player")
             .by("Raindancer118");
 
     @Override
@@ -57,7 +57,7 @@ public final class RanksModule implements FlexModule {
         context.closeWith(holders.watch());
         if (!holders.readable()) {
             context.log().error("holders.yml could not be read. No rank can be given or changed until it is "
-                    + "fixed — saving now would replace everybody's ranks.");
+                    + "fixed. Saving now would replace everybody's ranks.");
         }
 
         RankService service = new RankService(catalogue, holders, settings.current());

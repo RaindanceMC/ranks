@@ -59,7 +59,7 @@ public final class RankMenu extends Menu implements IRanksScreen {
         } else if (worn.isEmpty()) {
             about.add("<gray>You are wearing none of your ranks.");
         } else {
-            about.add("<gray>Wearing " + services.ranks().shownTag(worn.get()) + " <gray>— " + MINI.escapeTags(worn.get().title()));
+            about.add("<gray>Wearing " + services.ranks().shownTag(worn.get()) + " <gray>· " + MINI.escapeTags(worn.get().title()));
         }
         band(MenuLayout.WHO, 4, Icons.head(viewer.getUniqueId(),
                 worn.map(rank -> services.ranks().shownTag(rank) + " ").orElse("") + "<white>" + MINI.escapeTags(viewer.getName()), about),

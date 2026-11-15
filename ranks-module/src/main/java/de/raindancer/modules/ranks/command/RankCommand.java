@@ -409,7 +409,7 @@ public final class RankCommand implements IRanksCommand {
                         .map(id -> nameOfHolder(live, id))
                         .sorted(String.CASE_INSENSITIVE_ORDER).toList();
                 live.messages().send(sender, "ranks.list-line", "rank", tagFor(live, sender, rank), "id", rank.id(),
-                        "count", String.valueOf(names.size()), "players", names.isEmpty() ? "—" : String.join(", ", names),
+                        "count", String.valueOf(names.size()), "players", names.isEmpty() ? "none" : String.join(", ", names),
                         "groups", String.join(", ", rank.groups()));
             }
         });
