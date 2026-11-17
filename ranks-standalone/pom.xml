@@ -32,7 +32,8 @@
         <!-- 0.5.1: its per-player store is Core's KeyedDocument (no change in behaviour). -->
         <!-- 0.6.0: a permission group named like a rank gives that rank (staff ranks follow LuckPerms); support, creator and tester ship, builder is on the team. -->
         <!-- 0.7.0: ranks and LuckPerms groups are linked both ways — groups: per rank, /rank give and take change the group, /rank list counts its members. -->
-        <plugin.version>0.17.1</plugin.version>
+        <!-- 0.18.0: offers the creator statue board to RainsCore 2.106.0 (/eco statue place creator), from the holders of the creator rank. -->
+        <plugin.version>0.18.0</plugin.version>
     </properties>
 
     <dependencies>
