@@ -25,7 +25,7 @@ public final class RanksModule implements FlexModule {
 
     public static final String BADGE_OWNER = "ranks";
 
-    private static final ModuleInfo INFO = ModuleInfo.of("ranks", "Ranks", "0.16.1")
+    private static final ModuleInfo INFO = ModuleInfo.of("ranks", "Ranks", "0.17.0")
             .describedAs("Ranks like [OWNER], [DEV] or [ADMIN] in front of a name: in chat, above the head and in the tablist, switchable for the server and by every player")
             .by("Raindancer118");
 
@@ -117,8 +117,16 @@ public final class RanksModule implements FlexModule {
             context.log().info("RainsCore is older than 2.10.0: no rank screens until it is updated.");
         }
 
-        RanksCommands.ready(new RanksServices(context.plugin(), context.plugin().getServer(), context.core(),
-                context.log(), context.core().messages(), context.chat().brand(), service));
+        RanksServices services = new RanksServices(context.plugin(), context.plugin().getServer(), context.core(),
+                context.log(), context.core().messages(), context.chat().brand(), service);
+        RanksCommands.ready(services);
+        try {
+            var offered = RanksPreferences.all(() -> services);
+            offered.forEach(each -> de.raindancer.core.ui.preference.Preferences.offer(context.plugin(), each));
+            context.closeWith(() -> offered.forEach(de.raindancer.core.ui.preference.Preferences::withdraw));
+        } catch (LinkageError olderCore) {
+            context.log().info("RainsCore is older than 2.103.0: ranks are not on /preferences.");
+        }
         context.log().info("Ranks are up: {} rank(s), {} player(s) hold one.", ranks,
                 holders.all().values().stream().filter(holder -> !holder.ranks().isEmpty()).count());
     }
