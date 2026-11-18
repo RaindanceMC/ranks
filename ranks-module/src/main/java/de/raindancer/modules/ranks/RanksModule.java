@@ -25,7 +25,7 @@ public final class RanksModule implements FlexModule {
 
     public static final String BADGE_OWNER = "ranks";
 
-    private static final ModuleInfo INFO = ModuleInfo.of("ranks", "Ranks", "0.18.0")
+    private static final ModuleInfo INFO = ModuleInfo.of("ranks", "Ranks", "0.19.0")
             .describedAs("Ranks like [OWNER], [DEV] or [ADMIN] in front of a name: in chat, above the head and in the tablist, switchable for the server and by every player")
             .by("Raindancer118");
 
@@ -74,24 +74,45 @@ public final class RanksModule implements FlexModule {
                 context.core().messages());
         context.listener(welcome);
         context.closeWith(() -> service.onGiven(null));
-        // The creators' statues are Core's (2.106.0), placed with /eco statue place creator; here who stands on them.
-        var creators = new de.raindancer.modules.ranks.service.CreatorStatues(() -> service
-                .rank(de.raindancer.modules.ranks.service.CreatorStatues.RANK).map(service::everyHolderOf)
-                .orElse(java.util.Set.of()));
-        var creatorBoard = creators.board(id -> de.raindancer.core.platform.command.PlayerTargets.nameOf(server, id));
-        de.raindancer.core.ui.statue.StatueBoards.offer(context.plugin(), creatorBoard);
-        context.closeWith(() -> de.raindancer.core.ui.statue.StatueBoards.withdraw(creatorBoard));
-        var creatorsLook = de.raindancer.core.platform.util.Scheduling.asyncTimer(context.plugin(), 1, 60,
-                task -> creators.refresh());
-        if (creatorsLook != null) {
-            context.closeWith(creatorsLook::cancel);
+        // Statues are Core's (2.106.0), placed with /eco statue place creator|team; here who stands on them, each under
+        // their own rank's badge (Core 2.114.0). The team board leaves the creators to their own.
+        var creators = new de.raindancer.modules.ranks.service.RankStatues(
+                de.raindancer.modules.ranks.service.RankStatues.CREATOR,
+                "<light_purple><bold>Our creators</bold></light_purple>", "creators",
+                service.rank("creator").map(de.raindancer.modules.ranks.model.Rank::tag)
+                        .orElse("<light_purple>[CREATOR]</light_purple>"),
+                () -> service.rank("creator").stream().toList(), service::everyHolderOf, service::drawn);
+        var team = new de.raindancer.modules.ranks.service.RankStatues(
+                de.raindancer.modules.ranks.service.RankStatues.TEAM,
+                "<gold><bold>Our team</bold></gold>", "team members",
+                service.rank("team").map(de.raindancer.modules.ranks.model.Rank::tag)
+                        .orElse("<light_purple><bold>[TEAM]</bold></light_purple>"),
+                () -> service.ranks().stream().filter(rank -> rank.team() && !rank.id().equals("creator")).toList(),
+                service::everyHolderOf, service::drawn);
+        // Off the server thread; a rank given or taken redraws the statues right away instead of on the next round.
+        Runnable lookAgain = () -> {
+            creators.refresh();
+            team.refresh();
+            de.raindancer.core.ui.statue.Statues.installed().ifPresent(de.raindancer.core.ui.statue.Statues::refresh);
+        };
+        for (var statues : java.util.List.of(creators, team)) {
+            var board = statues.board(id -> de.raindancer.core.platform.command.PlayerTargets.nameOf(server, id));
+            de.raindancer.core.ui.statue.StatueBoards.offer(context.plugin(), board, statues::refresh);
+            context.closeWith(() -> de.raindancer.core.ui.statue.StatueBoards.withdraw(board));
+        }
+        service.onTaken(player -> de.raindancer.core.platform.util.Scheduling.async(context.plugin(), lookAgain));
+        context.closeWith(() -> service.onTaken(null));
+        var statuesLook = de.raindancer.core.platform.util.Scheduling.asyncTimer(context.plugin(), 1, 60,
+                task -> lookAgain.run());
+        if (statuesLook != null) {
+            context.closeWith(statuesLook::cancel);
         }
         service.onGiven(player -> {
             welcome.check(player, 1);
-            de.raindancer.core.platform.util.Scheduling.async(context.plugin(), creators::refresh);
+            de.raindancer.core.platform.util.Scheduling.async(context.plugin(), lookAgain);
         });
         var groupWatch = groups.onChange(player -> {
-            de.raindancer.core.platform.util.Scheduling.async(context.plugin(), creators::refresh);
+            de.raindancer.core.platform.util.Scheduling.async(context.plugin(), lookAgain);
             service.groupsChanged(player);
             if (player != null) {
                 welcome.check(player, 2);

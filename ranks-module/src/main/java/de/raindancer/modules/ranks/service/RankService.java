@@ -328,6 +328,13 @@ public final class RankService implements IRanksService {
         this.onGiven = listener == null ? player -> { } : listener;
     }
 
+    private volatile java.util.function.Consumer<UUID> onTaken = player -> { };
+
+    /** Told of every rank taken here (also when they still hold it through a higher group), from that thread. */
+    public void onTaken(java.util.function.Consumer<UUID> listener) {
+        this.onTaken = listener == null ? player -> { } : listener;
+    }
+
     private Outcome gained(UUID player, Outcome outcome) {
         if (outcome == Outcome.DONE) {
             onGiven.accept(player);
@@ -362,6 +369,7 @@ public final class RankService implements IRanksService {
         })) {
             return Outcome.NOT_SAVED;
         }
+        onTaken.accept(player);
         return inheritedFrom(player, rank).isPresent() ? Outcome.INHERITED : Outcome.DONE;
     }
 

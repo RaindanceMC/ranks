@@ -200,6 +200,18 @@ class RankServiceTest {
     }
 
     @Test
+    @DisplayName("taking a rank is told at once (statues show who holds it), a rank that was not held is not")
+    void takingIsTold() {
+        java.util.List<java.util.UUID> told = new java.util.ArrayList<>();
+        service.onTaken(told::add);
+        service.give(ADA, owner);
+        assertThat(service.take(ADA, owner)).isEqualTo(Outcome.DONE);
+        assertThat(told).containsExactly(ADA);
+        service.take(ADA, owner);
+        assertThat(told).as("nothing taken, nothing told").containsExactly(ADA);
+    }
+
+    @Test
     @DisplayName("with choosing off, players cannot change where or which — and their old choices stop counting")
     void choosingOff() {
         service.give(ADA, owner);
